@@ -4,8 +4,8 @@ import (
 	"asset-dairy/db"
 	"asset-dairy/handlers"
 	"asset-dairy/middleware"
-	"net/http"
 	"log"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -49,8 +49,8 @@ func main() {
 		protected.Use(middleware.JWTAuthMiddleware())
 		protected.POST("/auth/logout", authHandler.Logout)
 		protected.POST("/auth/change-password", func(c *gin.Context) { c.JSON(http.StatusNotImplemented, gin.H{"message": "Not implemented"}) })
-		protected.GET("/users/me", func(c *gin.Context) { c.JSON(http.StatusNotImplemented, gin.H{"message": "Not implemented"}) })
-		protected.PUT("/users/me", func(c *gin.Context) { c.JSON(http.StatusNotImplemented, gin.H{"message": "Not implemented"}) })
+		protected.GET("/profile", func(c *gin.Context) { c.JSON(http.StatusNotImplemented, gin.H{"message": "Not implemented"}) })
+		protected.PUT("/profile", func(c *gin.Context) { c.JSON(http.StatusNotImplemented, gin.H{"message": "Not implemented"}) })
 		protected.GET("/accounts", func(c *gin.Context) { c.JSON(http.StatusNotImplemented, gin.H{"message": "Not implemented"}) })
 		protected.POST("/accounts", func(c *gin.Context) { c.JSON(http.StatusNotImplemented, gin.H{"message": "Not implemented"}) })
 		// Add more routes as needed
