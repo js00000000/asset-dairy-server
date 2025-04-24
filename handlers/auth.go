@@ -50,3 +50,54 @@ func (h *AuthHandler) SignUp(c *gin.Context) {
 	}
 	c.JSON(http.StatusCreated, user)
 }
+
+// SignInRequest represents the payload for sign-in
+// Accepts email and password only
+// Example: {"email": "", "password": ""}
+type SignInRequest struct {
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required"`
+}
+
+// SignIn authenticates a user and returns a token (stub for now)
+func (h *AuthHandler) SignIn(c *gin.Context) {
+	var req SignInRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var id int64
+	var email, name, username, passwordHash string
+	var createdAt time.Time
+
+	if req.Email == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Email is required"})
+		return
+	}
+
+	err := h.DB.QueryRow(`SELECT id, email, name, username, password_hash, created_at FROM users WHERE email = $1`, req.Email).Scan(&id, &email, &name, &username, &passwordHash, &createdAt)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+		return
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(req.Password)); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+		return
+	}
+
+	// TODO: Replace with real JWT token generation
+	token := "stub-token"
+
+	c.JSON(http.StatusOK, gin.H{
+		"token": token,
+		"user": models.User{
+			ID:        id,
+			Email:     email,
+			Name:      name,
+			Username:  username,
+			CreatedAt: createdAt,
+		},
+	})
+}

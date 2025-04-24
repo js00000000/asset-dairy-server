@@ -30,7 +30,7 @@ func main() {
 	// Public routes
 	public := r.Group("/auth")
 	{
-		public.POST("/login", func(c *gin.Context) { c.JSON(http.StatusNotImplemented, gin.H{"message": "Not implemented"}) })
+		public.POST("/sign-in", authHandler.SignIn)
 		public.POST("/sign-up", authHandler.SignUp)
 	}
 
