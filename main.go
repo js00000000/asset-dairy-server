@@ -6,6 +6,8 @@ import (
 	"asset-dairy/middleware"
 	"log"
 	"net/http"
+	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -24,9 +26,24 @@ func main() {
 
 	// CORS middleware for frontend on port 5173
 	r.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
+		allowedOrigins := os.Getenv("CORS_ALLOWED_ORIGINS")
+		originList := strings.Split(allowedOrigins, ",")
+		requestOrigin := c.Request.Header.Get("Origin")
+		allowed := false
+		for _, o := range originList {
+			log.Println("Request origin:", requestOrigin)
+			if strings.TrimSpace(o) == requestOrigin {
+				allowed = true
+				log.Println("Allowed origin:", o)
+
+				break
+			}
+		}
+		if allowed {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", requestOrigin)
+		}
 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, ngrok-skip-browser-warning")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(204)
