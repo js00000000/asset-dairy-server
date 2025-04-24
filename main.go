@@ -35,6 +35,9 @@ func main() {
 		c.Next()
 	})
 
+	profileHandler := handlers.NewProfileHandler(dbConn)
+	accountHandler := handlers.NewAccountHandler(dbConn)
+
 	// Public routes
 	public := r.Group("/auth")
 	{
@@ -49,10 +52,12 @@ func main() {
 		protected.Use(middleware.JWTAuthMiddleware())
 		protected.POST("/auth/logout", authHandler.Logout)
 		protected.POST("/auth/change-password", func(c *gin.Context) { c.JSON(http.StatusNotImplemented, gin.H{"message": "Not implemented"}) })
-		protected.GET("/profile", func(c *gin.Context) { c.JSON(http.StatusNotImplemented, gin.H{"message": "Not implemented"}) })
-		protected.PUT("/profile", func(c *gin.Context) { c.JSON(http.StatusNotImplemented, gin.H{"message": "Not implemented"}) })
-		protected.GET("/accounts", func(c *gin.Context) { c.JSON(http.StatusNotImplemented, gin.H{"message": "Not implemented"}) })
-		protected.POST("/accounts", func(c *gin.Context) { c.JSON(http.StatusNotImplemented, gin.H{"message": "Not implemented"}) })
+		protected.GET("/profile", profileHandler.GetProfile)
+		protected.PUT("/profile", profileHandler.UpdateProfile)
+		protected.GET("/accounts", accountHandler.ListAccounts)
+		protected.POST("/accounts", accountHandler.CreateAccount)
+		protected.PUT("/accounts/:id", accountHandler.UpdateAccount)
+		protected.DELETE("/accounts/:id", accountHandler.DeleteAccount)
 		// Add more routes as needed
 	}
 
