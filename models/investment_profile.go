@@ -1,8 +1,8 @@
 package models
 
 type InvestmentProfile struct {
-	Id                                   int64  `json:"id" db:"id"`
-	UserId                               int64  `json:"user_id" db:"user_id"`
+	Id                                   string `json:"id" db:"id"`
+	UserId                               string `json:"user_id" db:"user_id"`
 	Age                                  int    `json:"age" db:"age"`
 	MaxAcceptableShortTermLossPercentage int    `json:"maxAcceptableShortTermLossPercentage" db:"max_acceptable_short_term_loss_percentage"`
 	ExpectedAnnualizedRateOfReturn       int    `json:"expectedAnnualizedRateOfReturn" db:"expected_annualized_rate_of_return"`

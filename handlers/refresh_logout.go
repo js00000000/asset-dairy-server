@@ -31,13 +31,13 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid refresh token claims"})
 		return
 	}
-	userID, ok1 := claims["user_id"].(float64)
+	userID, ok1 := claims["user_id"].(string)
 	email, ok2 := claims["email"].(string)
 	if !ok1 || !ok2 {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid refresh token data"})
 		return
 	}
-	accessToken, err := generateJWT(int64(userID), email)
+	accessToken, err := generateJWT(userID, email)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate new access token"})
 		return

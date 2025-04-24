@@ -37,6 +37,7 @@ func main() {
 
 	profileHandler := handlers.NewProfileHandler(dbConn)
 	accountHandler := handlers.NewAccountHandler(dbConn)
+	tradeHandler := handlers.NewTradeHandler(dbConn)
 
 	// Public routes
 	public := r.Group("/auth")
@@ -58,7 +59,12 @@ func main() {
 		protected.POST("/accounts", accountHandler.CreateAccount)
 		protected.PUT("/accounts/:id", accountHandler.UpdateAccount)
 		protected.DELETE("/accounts/:id", accountHandler.DeleteAccount)
-		// Add more routes as needed
+
+		// Trade routes
+		protected.GET("/trades", tradeHandler.ListTrades)
+		protected.POST("/trades", tradeHandler.CreateTrade)
+		protected.PUT("/trades/:id", tradeHandler.UpdateTrade)
+		protected.DELETE("/trades/:id", tradeHandler.DeleteTrade)
 	}
 
 	r.GET("/swagger/*any", ginSwaggerHandler()) // Swagger UI placeholder

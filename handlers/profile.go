@@ -7,6 +7,7 @@ import (
 	"asset-dairy/models"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type ProfileHandler struct {
@@ -82,14 +83,15 @@ func (h *ProfileHandler) UpdateProfile(c *gin.Context) {
 	}
 
 	// Upsert investment profile in investment_profiles table
-	_, err = h.DB.Exec(`INSERT INTO investment_profiles (user_id, age, max_acceptable_short_term_loss_percentage, expected_annualized_rate_of_return, time_horizon, years_investing)
-		VALUES ($1, $2, $3, $4, $5, $6)
+	_, err = h.DB.Exec(`INSERT INTO investment_profiles (id, user_id, age, max_acceptable_short_term_loss_percentage, expected_annualized_rate_of_return, time_horizon, years_investing)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		ON CONFLICT (user_id) DO UPDATE SET
 			age = EXCLUDED.age,
 			max_acceptable_short_term_loss_percentage = EXCLUDED.max_acceptable_short_term_loss_percentage,
 			expected_annualized_rate_of_return = EXCLUDED.expected_annualized_rate_of_return,
 			time_horizon = EXCLUDED.time_horizon,
 			years_investing = EXCLUDED.years_investing`,
+		uuid.New().String(),
 		userID,
 		req.InvestmentProfile.Age,
 		req.InvestmentProfile.MaxAcceptableShortTermLossPercentage,

@@ -12,6 +12,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -36,12 +37,13 @@ func (h *AuthHandler) SignUp(c *gin.Context) {
 		return
 	}
 
-	var id int64
+	id := uuid.New().String()
 	err = h.DB.QueryRow(
-		`INSERT INTO users (email, name, username, password_hash, created_at) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-		req.Email, req.Name, req.Username, string(hashed), time.Now(),
+		`INSERT INTO users (id, email, name, username, password_hash, created_at) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+		id, req.Email, req.Name, req.Username, string(hashed), time.Now(),
 	).Scan(&id)
 	if err != nil {
+		log.Println("Failed to insert user:", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Email may already be registered"})
 		return
 	}
@@ -64,7 +66,7 @@ type SignInRequest struct {
 }
 
 // generateJWT creates a JWT for a given user ID and email
-func generateJWT(userID int64, email string) (string, error) {
+func generateJWT(userID string, email string) (string, error) {
 	secret := os.Getenv("JWT_SECRET")
 	log.Println(secret)
 	if secret == "" {
@@ -80,7 +82,7 @@ func generateJWT(userID int64, email string) (string, error) {
 }
 
 // generateRefreshToken creates a refresh token JWT for a given user ID and email
-func generateRefreshToken(userID int64, email string) (string, error) {
+func generateRefreshToken(userID string, email string) (string, error) {
 	secret := os.Getenv("JWT_REFRESH_SECRET")
 	if secret == "" {
 		return "", errors.New("JWT refresh secret not set in environment")
@@ -102,8 +104,7 @@ func (h *AuthHandler) SignIn(c *gin.Context) {
 		return
 	}
 
-	var id int64
-	var email, name, username, passwordHash string
+	var id, email, name, username, passwordHash string
 	var createdAt time.Time
 
 	if req.Email == "" {

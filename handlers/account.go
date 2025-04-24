@@ -2,11 +2,13 @@ package handlers
 
 import (
 	"database/sql"
+	"log"
 	"net/http"
 
 	"asset-dairy/models"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type AccountHandler struct {
@@ -26,6 +28,7 @@ func (h *AccountHandler) ListAccounts(c *gin.Context) {
 	}
 	rows, err := h.DB.Query("SELECT id, name, currency, balance FROM accounts WHERE user_id = $1", userID)
 	if err != nil {
+		log.Println("Failed to fetch accounts:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch accounts"})
 		return
 	}
@@ -55,7 +58,7 @@ func (h *AccountHandler) CreateAccount(c *gin.Context) {
 		return
 	}
 	var id string
-	err := h.DB.QueryRow("INSERT INTO accounts (user_id, name, currency, balance) VALUES ($1, $2, $3, $4) RETURNING id", userID, req.Name, req.Currency, req.Balance).Scan(&id)
+	err := h.DB.QueryRow("INSERT INTO accounts (id, user_id, name, currency, balance) VALUES ($1, $2, $3, $4, $5) RETURNING id", uuid.New().String(), userID, req.Name, req.Currency, req.Balance).Scan(&id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create account"})
 		return
