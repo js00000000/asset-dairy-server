@@ -52,7 +52,7 @@ func main() {
 	{
 		protected.Use(middleware.JWTAuthMiddleware())
 		protected.POST("/auth/logout", authHandler.Logout)
-		protected.POST("/auth/change-password", func(c *gin.Context) { c.JSON(http.StatusNotImplemented, gin.H{"message": "Not implemented"}) })
+		protected.POST("/profile/change-password", profileHandler.ChangePassword)
 		protected.GET("/profile", profileHandler.GetProfile)
 		protected.PUT("/profile", profileHandler.UpdateProfile)
 		protected.GET("/accounts", accountHandler.ListAccounts)

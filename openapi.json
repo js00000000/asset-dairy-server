@@ -87,7 +87,7 @@
         }
       }
     },
-    "/auth/change-password": {
+    "/profile/change-password": {
       "post": {
         "summary": "Change password",
         "security": [{ "bearerAuth": [] }],
@@ -232,16 +232,6 @@
         "responses": {
           "200": { "description": "Portfolio summary", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PortfolioSummary" } } } },
           "401": { "description": "Unauthorized" }
-        }
-      }
-    },
-    "/prices/{ticker}": {
-      "get": {
-        "summary": "Get real-time price for asset",
-        "parameters": [{ "name": "ticker", "in": "path", "required": true, "schema": { "type": "string" } }],
-        "responses": {
-          "200": { "description": "Price info", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PriceInfo" } } } },
-          "404": { "description": "Not Found" }
         }
       }
     }
@@ -393,14 +383,6 @@
           "accounts": { "type": "array", "items": { "$ref": "#/components/schemas/Account" } },
           "assets": { "type": "array", "items": { "type": "object" } },
           "totalValue": { "type": "number" }
-        }
-      },
-      "PriceInfo": {
-        "type": "object",
-        "properties": {
-          "ticker": { "type": "string" },
-          "price": { "type": "number" },
-          "currency": { "type": "string" }
         }
       }
     }
