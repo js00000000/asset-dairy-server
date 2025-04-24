@@ -2,16 +2,17 @@ package handlers
 
 import (
 	"database/sql"
+	"errors"
+	"log"
 	"net/http"
 	"os"
 	"time"
-	"errors"
 
 	"asset-dairy/models"
 
 	"github.com/gin-gonic/gin"
-	"golang.org/x/crypto/bcrypt"
 	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthHandler struct {
@@ -65,13 +66,14 @@ type SignInRequest struct {
 // generateJWT creates a JWT for a given user ID and email
 func generateJWT(userID int64, email string) (string, error) {
 	secret := os.Getenv("JWT_SECRET")
+	log.Println(secret)
 	if secret == "" {
 		return "", errors.New("JWT secret not set in environment")
 	}
 	claims := jwt.MapClaims{
 		"user_id": userID,
-		"email": email,
-		"exp": time.Now().Add(15 * time.Minute).Unix(), // 15 min expiry
+		"email":   email,
+		"exp":     time.Now().Add(15 * time.Minute).Unix(), // 15 min expiry
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(secret))
@@ -85,8 +87,8 @@ func generateRefreshToken(userID int64, email string) (string, error) {
 	}
 	claims := jwt.MapClaims{
 		"user_id": userID,
-		"email": email,
-		"exp": time.Now().Add(7 * 24 * time.Hour).Unix(), // 7 days
+		"email":   email,
+		"exp":     time.Now().Add(7 * 24 * time.Hour).Unix(), // 7 days
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(secret))

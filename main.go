@@ -5,11 +5,18 @@ import (
 	"asset-dairy/handlers"
 	"asset-dairy/middleware"
 	"net/http"
+	"log"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	// Load environment variables from .env file
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found or error loading .env file")
+	}
+
 	dbConn := db.InitDB()
 	authHandler := handlers.NewAuthHandler(dbConn)
 
