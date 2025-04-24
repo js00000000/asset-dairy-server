@@ -9,22 +9,74 @@
     { "url": "http://localhost:3000", "description": "Local dev" }
   ],
   "paths": {
-    "/auth/login": {
+    "/auth/sign-in": {
       "post": {
-        "summary": "Login",
+        "summary": "Sign in",
         "requestBody": {
           "required": true,
           "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LoginRequest" } } }
         },
         "responses": {
-          "200": { "description": "Success", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/User" } } } },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/LoginResponse" }
+              }
+            }
+          },
           "401": { "description": "Unauthorized" }
         }
       }
     },
-    "/auth/register": {
+    "/auth/refresh": {
       "post": {
-        "summary": "Register",
+        "summary": "Refresh access token",
+        "description": "Obtain a new access token using the refresh token cookie.",
+        "responses": {
+          "200": {
+            "description": "New access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": { "type": "string", "description": "JWT access token" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Invalid or expired refresh token" }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "summary": "Logout user",
+        "description": "Logs out the user and clears the refresh token cookie.",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Logged out",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/auth/sign-up": {
+      "post": {
+        "summary": "Sign up",
         "requestBody": {
           "required": true,
           "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RegisterRequest" } } }
@@ -211,14 +263,23 @@
         },
         "required": ["email", "password"]
       },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "token": { "type": "string" },
+          "user": { "$ref": "#/components/schemas/User" }
+        },
+        "required": ["token", "user"]
+      },
       "RegisterRequest": {
         "type": "object",
         "properties": {
           "name": { "type": "string" },
+          "username": { "type": "string" },
           "email": { "type": "string", "format": "email" },
           "password": { "type": "string" }
         },
-        "required": ["name", "email", "password"]
+        "required": ["name", "username", "email", "password"]
       },
       "ChangePasswordRequest": {
         "type": "object",

@@ -3,6 +3,7 @@ package main
 import (
 	"asset-dairy/db"
 	"asset-dairy/handlers"
+	"asset-dairy/middleware"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -32,12 +33,14 @@ func main() {
 	{
 		public.POST("/sign-in", authHandler.SignIn)
 		public.POST("/sign-up", authHandler.SignUp)
+		public.POST("/refresh", authHandler.RefreshToken)
 	}
 
 	// Protected routes (JWT middleware to be added)
 	protected := r.Group("/")
 	{
-		protected.Use(JWTAuthMiddleware())
+		protected.Use(middleware.JWTAuthMiddleware())
+		protected.POST("/auth/logout", authHandler.Logout)
 		protected.POST("/auth/change-password", func(c *gin.Context) { c.JSON(http.StatusNotImplemented, gin.H{"message": "Not implemented"}) })
 		protected.GET("/users/me", func(c *gin.Context) { c.JSON(http.StatusNotImplemented, gin.H{"message": "Not implemented"}) })
 		protected.PUT("/users/me", func(c *gin.Context) { c.JSON(http.StatusNotImplemented, gin.H{"message": "Not implemented"}) })
@@ -49,14 +52,6 @@ func main() {
 	r.GET("/swagger/*any", ginSwaggerHandler()) // Swagger UI placeholder
 
 	r.Run(":3000")
-}
-
-// JWTAuthMiddleware is a placeholder for actual JWT authentication
-func JWTAuthMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// TODO: Implement JWT authentication
-		c.Next()
-	}
 }
 
 // ginSwaggerHandler is a placeholder for Swagger docs

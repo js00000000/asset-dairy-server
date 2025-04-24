@@ -3,12 +3,15 @@ package handlers
 import (
 	"database/sql"
 	"net/http"
+	"os"
 	"time"
+	"errors"
 
 	"asset-dairy/models"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type AuthHandler struct {
@@ -59,7 +62,37 @@ type SignInRequest struct {
 	Password string `json:"password" binding:"required"`
 }
 
-// SignIn authenticates a user and returns a token (stub for now)
+// generateJWT creates a JWT for a given user ID and email
+func generateJWT(userID int64, email string) (string, error) {
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		return "", errors.New("JWT secret not set in environment")
+	}
+	claims := jwt.MapClaims{
+		"user_id": userID,
+		"email": email,
+		"exp": time.Now().Add(15 * time.Minute).Unix(), // 15 min expiry
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(secret))
+}
+
+// generateRefreshToken creates a refresh token JWT for a given user ID and email
+func generateRefreshToken(userID int64, email string) (string, error) {
+	secret := os.Getenv("JWT_REFRESH_SECRET")
+	if secret == "" {
+		return "", errors.New("JWT refresh secret not set in environment")
+	}
+	claims := jwt.MapClaims{
+		"user_id": userID,
+		"email": email,
+		"exp": time.Now().Add(7 * 24 * time.Hour).Unix(), // 7 days
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(secret))
+}
+
+// SignIn authenticates a user and returns a JWT token and user object
 func (h *AuthHandler) SignIn(c *gin.Context) {
 	var req SignInRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -87,8 +120,18 @@ func (h *AuthHandler) SignIn(c *gin.Context) {
 		return
 	}
 
-	// TODO: Replace with real JWT token generation
-	token := "stub-token"
+	token, err := generateJWT(id, email)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+		return
+	}
+	refreshToken, err := generateRefreshToken(id, email)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate refresh token"})
+		return
+	}
+	// Set refresh token as HttpOnly cookie
+	c.SetCookie("refresh_token", refreshToken, 7*24*3600, "/", "", false, true)
 
 	c.JSON(http.StatusOK, gin.H{
 		"token": token,
