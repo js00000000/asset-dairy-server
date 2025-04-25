@@ -1,5 +1,5 @@
 -- +migrate Up
-CREATE TABLE trades (
+CREATE TABLE IF NOT EXISTS trades (
     id UUID PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     type VARCHAR(10) NOT NULL CHECK (type IN ('buy', 'sell')),

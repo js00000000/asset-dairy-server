@@ -12,6 +12,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
 func main() {
@@ -25,6 +29,28 @@ func main() {
 	}
 
 	dbConn := db.InitDB()
+
+	// Run DB migrations before starting the server
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		log.Fatal("DATABASE_URL is not set")
+	}
+	driver, err := postgres.WithInstance(dbConn, &postgres.Config{})
+	if err != nil {
+		log.Fatalf("Failed to create DB driver for migrations: %v", err)
+	}
+	m, err := migrate.NewWithDatabaseInstance(
+		"file://./migrations",
+		"postgres",
+		driver,
+	)
+	if err != nil {
+		log.Fatalf("Failed to create migration instance: %v", err)
+	}
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+		log.Fatalf("Migration failed: %v", err)
+	}
+	log.Println("Database migrated successfully")
 	authHandler := handlers.NewAuthHandler(dbConn)
 
 	r := gin.Default()
