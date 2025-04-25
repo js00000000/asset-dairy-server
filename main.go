@@ -4,6 +4,7 @@ import (
 	"asset-dairy/db"
 	"asset-dairy/handlers"
 	"asset-dairy/middleware"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -14,9 +15,13 @@ import (
 )
 
 func main() {
-	// Load environment variables from .env file
-	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found or error loading .env file")
+	env := os.Getenv("ENV")
+	if env == "" {
+		env = "development"
+	}
+	dotenvFile := fmt.Sprintf(".env.%s", env)
+	if err := godotenv.Load(dotenvFile); err != nil {
+		log.Printf("No %s file found or error loading %s", dotenvFile, dotenvFile)
 	}
 
 	dbConn := db.InitDB()
