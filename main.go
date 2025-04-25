@@ -62,11 +62,8 @@ func main() {
 		requestOrigin := c.Request.Header.Get("Origin")
 		allowed := false
 		for _, o := range originList {
-			log.Println("Request origin:", requestOrigin)
 			if strings.TrimSpace(o) == requestOrigin {
 				allowed = true
-				log.Println("Allowed origin:", o)
-
 				break
 			}
 		}
