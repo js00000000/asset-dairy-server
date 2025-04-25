@@ -10,7 +10,7 @@ type Account struct {
 type AccountCreateRequest struct {
 	Name     string  `json:"name" binding:"required"`
 	Currency string  `json:"currency" binding:"required"`
-	Balance  float64 `json:"balance" binding:"required"`
+	Balance  float64 `json:"balance"`
 }
 
 type AccountUpdateRequest struct {
