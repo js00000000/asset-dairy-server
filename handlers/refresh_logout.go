@@ -42,6 +42,13 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate new access token"})
 		return
 	}
+	// Generate new refresh token and set it in the cookie
+	newRefreshToken, err := generateRefreshToken(userID, email)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate new refresh token"})
+		return
+	}
+	c.SetCookie("refresh_token", newRefreshToken, 7*24*3600, "/", "", false, true)
 	c.JSON(http.StatusOK, gin.H{"token": accessToken})
 }
 
