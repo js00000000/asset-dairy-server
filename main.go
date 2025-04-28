@@ -58,7 +58,6 @@ func main() {
 	// CORS middleware for frontend on port 5173
 	r.Use(func(c *gin.Context) {
 		allowedOrigins := os.Getenv("CORS_ALLOWED_ORIGINS")
-		log.Println("Allowed origins:", allowedOrigins)
 		originList := strings.Split(allowedOrigins, ",")
 		requestOrigin := c.Request.Header.Get("Origin")
 		allowed := false
