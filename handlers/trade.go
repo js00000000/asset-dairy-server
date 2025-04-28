@@ -29,7 +29,7 @@ func (h *TradeHandler) ListTrades(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
-	rows, err := h.DB.Query("SELECT id, type, asset_type, ticker, trade_date, quantity, price, account_id, reason FROM trades WHERE user_id = $1", userID)
+	rows, err := h.DB.Query("SELECT id, type, asset_type, ticker, trade_date, quantity, price, currency, account_id, reason FROM trades WHERE user_id = $1", userID)
 	if err != nil {
 		log.Println("Failed to fetch trades:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch trades"})
@@ -40,7 +40,7 @@ func (h *TradeHandler) ListTrades(c *gin.Context) {
 	for rows.Next() {
 		var t models.Trade
 		var reason sql.NullString
-		if err := rows.Scan(&t.ID, &t.Type, &t.AssetType, &t.Ticker, &t.TradeDate, &t.Quantity, &t.Price, &t.AccountID, &reason); err != nil {
+		if err := rows.Scan(&t.ID, &t.Type, &t.AssetType, &t.Ticker, &t.TradeDate, &t.Quantity, &t.Price, &t.Currency, &t.AccountID, &reason); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to scan trade"})
 			return
 		}
@@ -84,11 +84,12 @@ func (h *TradeHandler) CreateTrade(c *gin.Context) {
 		TradeDate: tradeDate,
 		Quantity:  req.Quantity,
 		Price:     req.Price,
+		Currency:  req.Currency,
 		AccountID: req.AccountID,
 		Reason:    req.Reason,
 	}
-	_, err = h.DB.Exec(`INSERT INTO trades (id, user_id, type, asset_type, ticker, trade_date, quantity, price, account_id, reason) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-		trade.ID, userID, trade.Type, trade.AssetType, trade.Ticker, trade.TradeDate, trade.Quantity, trade.Price, trade.AccountID, trade.Reason,
+	_, err = h.DB.Exec(`INSERT INTO trades (id, user_id, type, asset_type, ticker, trade_date, quantity, price, currency, account_id, reason) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+		trade.ID, userID, trade.Type, trade.AssetType, trade.Ticker, trade.TradeDate, trade.Quantity, trade.Price, trade.Currency, trade.AccountID, trade.Reason,
 	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create trade"})
@@ -156,6 +157,11 @@ func (h *TradeHandler) UpdateTrade(c *gin.Context) {
 		args = append(args, req.Price)
 		argIdx++
 	}
+	if req.Currency != "" {
+		setClauses = append(setClauses, "currency = $"+strconv.Itoa(argIdx))
+		args = append(args, req.Currency)
+		argIdx++
+	}
 	if req.AccountID != "" {
 		// Verify new account belongs to user
 		var accCount int
@@ -187,9 +193,9 @@ func (h *TradeHandler) UpdateTrade(c *gin.Context) {
 	// Return updated trade
 	var t models.Trade
 	var reason sql.NullString
-	err = h.DB.QueryRow(`SELECT t.id, t.type, t.asset_type, t.ticker, t.trade_date, t.quantity, t.price, t.account_id, t.reason
+	err = h.DB.QueryRow(`SELECT t.id, t.type, t.asset_type, t.ticker, t.trade_date, t.quantity, t.price, t.currency, t.account_id, t.reason
 		FROM trades t JOIN accounts a ON t.account_id = a.id WHERE t.id = $1 AND a.user_id = $2`, id, userID).Scan(
-		&t.ID, &t.Type, &t.AssetType, &t.Ticker, &t.TradeDate, &t.Quantity, &t.Price, &t.AccountID, &reason,
+		&t.ID, &t.Type, &t.AssetType, &t.Ticker, &t.TradeDate, &t.Quantity, &t.Price, &t.Currency, &t.AccountID, &reason,
 	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch updated trade"})
