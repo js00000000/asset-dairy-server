@@ -4,6 +4,7 @@ import (
 	"asset-dairy/db"
 	"asset-dairy/handlers"
 	"asset-dairy/middleware"
+	"asset-dairy/services"
 	"fmt"
 	"log"
 	"net/http"
@@ -71,7 +72,7 @@ func main() {
 			c.Writer.Header().Set("Access-Control-Allow-Origin", requestOrigin)
 		}
 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, ngrok-skip-browser-warning")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(204)
@@ -82,7 +83,10 @@ func main() {
 
 	profileHandler := handlers.NewProfileHandler(dbConn)
 	accountHandler := handlers.NewAccountHandler(dbConn)
-	tradeHandler := handlers.NewTradeHandler(dbConn)
+	tradeService := services.NewTradeService(dbConn)
+	holdingService := services.NewHoldingService(tradeService)
+	tradeHandler := handlers.NewTradeHandler(dbConn, tradeService)
+	holdingHandler := handlers.NewHoldingHandler(holdingService)
 
 	// Public routes
 	public := r.Group("/auth")
@@ -110,6 +114,9 @@ func main() {
 		protected.POST("/trades", tradeHandler.CreateTrade)
 		protected.PUT("/trades/:id", tradeHandler.UpdateTrade)
 		protected.DELETE("/trades/:id", tradeHandler.DeleteTrade)
+
+		// Asset routes
+		protected.GET("/holdings", holdingHandler.ListHoldings)
 	}
 
 	r.GET("/swagger/*any", ginSwaggerHandler()) // Swagger UI placeholder

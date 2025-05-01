@@ -6,7 +6,10 @@
     "description": "API for Asset Dairy asset/portfolio tracking app."
   },
   "servers": [
-    { "url": "http://localhost:3000", "description": "Local dev" }
+    {
+      "url": "http://localhost:3000",
+      "description": "Local dev"
+    }
   ],
   "paths": {
     "/auth/sign-in": {
@@ -14,18 +17,28 @@
         "summary": "Sign in",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LoginRequest" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
         },
         "responses": {
           "200": {
             "description": "Success",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/LoginResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
               }
             }
           },
-          "401": { "description": "Unauthorized" }
+          "401": {
+            "description": "Unauthorized"
+          }
         }
       }
     },
@@ -41,13 +54,18 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "token": { "type": "string", "description": "JWT access token" }
+                    "token": {
+                      "type": "string",
+                      "description": "JWT access token"
+                    }
                   }
                 }
               }
             }
           },
-          "401": { "description": "Invalid or expired refresh token" }
+          "401": {
+            "description": "Invalid or expired refresh token"
+          }
         }
       }
     },
@@ -55,7 +73,11 @@
       "post": {
         "summary": "Logout user",
         "description": "Logs out the user and clears the refresh token cookie.",
-        "security": [{ "bearerAuth": [] }],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "responses": {
           "200": {
             "description": "Logged out",
@@ -64,13 +86,17 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "message": { "type": "string" }
+                    "message": {
+                      "type": "string"
+                    }
                   }
                 }
               }
             }
           },
-          "401": { "description": "Unauthorized" }
+          "401": {
+            "description": "Unauthorized"
+          }
         }
       }
     },
@@ -79,159 +105,465 @@
         "summary": "Sign up",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RegisterRequest" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          }
         },
         "responses": {
-          "201": { "description": "Created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/User" } } } },
-          "400": { "description": "Bad Request" }
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request"
+          }
         }
       }
     },
     "/profile/change-password": {
       "post": {
         "summary": "Change password",
-        "security": [{ "bearerAuth": [] }],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ChangePasswordRequest" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordRequest"
+              }
+            }
+          }
         },
         "responses": {
-          "204": { "description": "Password changed" },
-          "400": { "description": "Bad Request" },
-          "401": { "description": "Unauthorized" }
+          "204": {
+            "description": "Password changed"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
         }
       }
     },
     "/profile": {
       "get": {
         "summary": "Get current user profile",
-        "security": [{ "bearerAuth": [] }],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "responses": {
-          "200": { "description": "User profile", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/User" } } } },
-          "401": { "description": "Unauthorized" }
+          "200": {
+            "description": "User profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
         }
       },
       "put": {
         "summary": "Update user profile",
-        "security": [{ "bearerAuth": [] }],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UserUpdateRequest" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserUpdateRequest"
+              }
+            }
+          }
         },
         "responses": {
-          "200": { "description": "Updated profile", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/User" } } } },
-          "400": { "description": "Bad Request" },
-          "401": { "description": "Unauthorized" }
+          "200": {
+            "description": "Updated profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
         }
       }
     },
     "/accounts": {
       "get": {
         "summary": "List all accounts",
-        "security": [{ "bearerAuth": [] }],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "responses": {
-          "200": { "description": "Accounts list", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Account" } } } } },
-          "401": { "description": "Unauthorized" }
+          "200": {
+            "description": "Accounts list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Account"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
         }
       },
       "post": {
         "summary": "Create new account",
-        "security": [{ "bearerAuth": [] }],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AccountCreateRequest" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountCreateRequest"
+              }
+            }
+          }
         },
         "responses": {
-          "201": { "description": "Created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Account" } } } },
-          "400": { "description": "Bad Request" },
-          "401": { "description": "Unauthorized" }
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Account"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
         }
       }
     },
     "/accounts/{id}": {
       "put": {
         "summary": "Update account",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AccountUpdateRequest" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountUpdateRequest"
+              }
+            }
+          }
         },
         "responses": {
-          "200": { "description": "Updated account", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Account" } } } },
-          "400": { "description": "Bad Request" },
-          "401": { "description": "Unauthorized" },
-          "404": { "description": "Not Found" }
+          "200": {
+            "description": "Updated account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Account"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          }
         }
       },
       "delete": {
         "summary": "Delete account",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
-          "204": { "description": "Deleted" },
-          "401": { "description": "Unauthorized" },
-          "404": { "description": "Not Found" }
+          "204": {
+            "description": "Deleted"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          }
         }
       }
     },
     "/trades": {
       "get": {
         "summary": "List all trades",
-        "security": [{ "bearerAuth": [] }],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "responses": {
-          "200": { "description": "Trades list", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Trade" } } } } },
-          "401": { "description": "Unauthorized" }
+          "200": {
+            "description": "Trades list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Trade"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
         }
       },
       "post": {
         "summary": "Create trade",
-        "security": [{ "bearerAuth": [] }],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TradeCreateRequest" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TradeCreateRequest"
+              }
+            }
+          }
         },
         "responses": {
-          "201": { "description": "Created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Trade" } } } },
-          "400": { "description": "Bad Request" },
-          "401": { "description": "Unauthorized" }
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Trade"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
         }
       }
     },
     "/trades/{id}": {
       "put": {
         "summary": "Update trade",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TradeUpdateRequest" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TradeUpdateRequest"
+              }
+            }
+          }
         },
         "responses": {
-          "200": { "description": "Updated trade", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Trade" } } } },
-          "400": { "description": "Bad Request" },
-          "401": { "description": "Unauthorized" },
-          "404": { "description": "Not Found" }
+          "200": {
+            "description": "Updated trade",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Trade"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          }
         }
       },
       "delete": {
         "summary": "Delete trade",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
-          "204": { "description": "Deleted" },
-          "401": { "description": "Unauthorized" },
-          "404": { "description": "Not Found" }
+          "204": {
+            "description": "Deleted"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          }
         }
       }
     },
     "/portfolio": {
       "get": {
         "summary": "Portfolio summary",
-        "security": [{ "bearerAuth": [] }],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "responses": {
-          "200": { "description": "Portfolio summary", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PortfolioSummary" } } } },
-          "401": { "description": "Unauthorized" }
+          "200": {
+            "description": "Portfolio summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/holdings": {
+      "get": {
+        "summary": "List all holdings",
+        "description": "Get a list of all holdings with their current holdings and average prices",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of holdings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Holding"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
         }
       }
     }
@@ -248,142 +580,380 @@
       "LoginRequest": {
         "type": "object",
         "properties": {
-          "email": { "type": "string", "format": "email" },
-          "password": { "type": "string" }
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string"
+          }
         },
-        "required": ["email", "password"]
+        "required": [
+          "email",
+          "password"
+        ]
       },
       "LoginResponse": {
         "type": "object",
         "properties": {
-          "token": { "type": "string" },
-          "user": { "$ref": "#/components/schemas/User" }
+          "token": {
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          }
         },
-        "required": ["token", "user"]
+        "required": [
+          "token",
+          "user"
+        ]
       },
       "RegisterRequest": {
         "type": "object",
         "properties": {
-          "name": { "type": "string" },
-          "username": { "type": "string" },
-          "email": { "type": "string", "format": "email" },
-          "password": { "type": "string" }
+          "name": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string"
+          }
         },
-        "required": ["name", "username", "email", "password"]
+        "required": [
+          "name",
+          "username",
+          "email",
+          "password"
+        ]
       },
       "ChangePasswordRequest": {
         "type": "object",
         "properties": {
-          "currentPassword": { "type": "string" },
-          "newPassword": { "type": "string" }
+          "currentPassword": {
+            "type": "string"
+          },
+          "newPassword": {
+            "type": "string"
+          }
         },
-        "required": ["currentPassword", "newPassword"]
+        "required": [
+          "currentPassword",
+          "newPassword"
+        ]
       },
       "User": {
         "type": "object",
         "properties": {
-          "id": { "type": "string" },
-          "name": { "type": "string" },
-          "email": { "type": "string", "format": "email" },
-          "avatar": { "type": "string", "nullable": true },
-          "investmentProfile": { "$ref": "#/components/schemas/InvestmentProfile" }
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "avatar": {
+            "type": "string",
+            "nullable": true
+          },
+          "investmentProfile": {
+            "$ref": "#/components/schemas/InvestmentProfile"
+          }
         },
-        "required": ["id", "name", "email"]
+        "required": [
+          "id",
+          "name",
+          "email"
+        ]
       },
       "UserUpdateRequest": {
         "type": "object",
         "properties": {
-          "name": { "type": "string" },
-          "avatar": { "type": "string", "nullable": true },
-          "investmentProfile": { "$ref": "#/components/schemas/InvestmentProfile" }
+          "name": {
+            "type": "string"
+          },
+          "avatar": {
+            "type": "string",
+            "nullable": true
+          },
+          "investmentProfile": {
+            "$ref": "#/components/schemas/InvestmentProfile"
+          }
         }
       },
       "InvestmentProfile": {
         "type": "object",
         "properties": {
-          "age": { "type": "integer" },
-          "maxAcceptableShortTermLossPercentage": { "type": "number" },
-          "expectedAnnualizedRateOfReturn": { "type": "number" },
-          "timeHorizon": { "type": "string" },
-          "yearsInvesting": { "type": "integer" }
+          "age": {
+            "type": "integer"
+          },
+          "maxAcceptableShortTermLossPercentage": {
+            "type": "number"
+          },
+          "expectedAnnualizedRateOfReturn": {
+            "type": "number"
+          },
+          "timeHorizon": {
+            "type": "string"
+          },
+          "yearsInvesting": {
+            "type": "integer"
+          }
         }
       },
       "Account": {
         "type": "object",
         "properties": {
-          "id": { "type": "string" },
-          "name": { "type": "string" },
-          "currency": { "type": "string" },
-          "balance": { "type": "number" }
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "balance": {
+            "type": "number"
+          }
         },
-        "required": ["id", "name", "currency", "balance"]
+        "required": [
+          "id",
+          "name",
+          "currency",
+          "balance"
+        ]
       },
       "AccountCreateRequest": {
         "type": "object",
         "properties": {
-          "name": { "type": "string" },
-          "currency": { "type": "string" },
-          "balance": { "type": "number" }
+          "name": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "balance": {
+            "type": "number"
+          }
         },
-        "required": ["name", "currency", "balance"]
+        "required": [
+          "name",
+          "currency",
+          "balance"
+        ]
       },
       "AccountUpdateRequest": {
         "type": "object",
         "properties": {
-          "name": { "type": "string" },
-          "currency": { "type": "string" },
-          "balance": { "type": "number" }
+          "name": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "balance": {
+            "type": "number"
+          }
         }
       },
       "Trade": {
         "type": "object",
         "properties": {
-          "id": { "type": "string" },
-          "type": { "type": "string", "enum": ["buy", "sell"] },
-          "assetType": { "type": "string", "enum": ["stock", "crypto"] },
-          "ticker": { "type": "string" },
-          "tradeDate": { "type": "string", "format": "date" },
-          "quantity": { "type": "number" },
-          "price": { "type": "number" },
-          "accountId": { "type": "string" },
-          "reason": { "type": "string", "nullable": true }
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "buy",
+              "sell"
+            ]
+          },
+          "assetType": {
+            "type": "string",
+            "enum": [
+              "stock",
+              "crypto"
+            ]
+          },
+          "ticker": {
+            "type": "string"
+          },
+          "tradeDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "price": {
+            "type": "number"
+          },
+          "accountId": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true
+          }
         },
-        "required": ["id", "type", "assetType", "ticker", "tradeDate", "quantity", "price", "accountId"]
+        "required": [
+          "id",
+          "type",
+          "assetType",
+          "ticker",
+          "tradeDate",
+          "quantity",
+          "price",
+          "accountId"
+        ]
       },
       "TradeCreateRequest": {
         "type": "object",
         "properties": {
-          "type": { "type": "string", "enum": ["buy", "sell"] },
-          "assetType": { "type": "string", "enum": ["stock", "crypto"] },
-          "ticker": { "type": "string" },
-          "tradeDate": { "type": "string", "format": "date" },
-          "quantity": { "type": "number" },
-          "price": { "type": "number" },
-          "accountId": { "type": "string" },
-          "reason": { "type": "string", "nullable": true }
+          "type": {
+            "type": "string",
+            "enum": [
+              "buy",
+              "sell"
+            ]
+          },
+          "assetType": {
+            "type": "string",
+            "enum": [
+              "stock",
+              "crypto"
+            ]
+          },
+          "ticker": {
+            "type": "string"
+          },
+          "tradeDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "price": {
+            "type": "number"
+          },
+          "accountId": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true
+          }
         },
-        "required": ["type", "assetType", "ticker", "tradeDate", "quantity", "price", "accountId"]
+        "required": [
+          "type",
+          "assetType",
+          "ticker",
+          "tradeDate",
+          "quantity",
+          "price",
+          "accountId"
+        ]
       },
       "TradeUpdateRequest": {
         "type": "object",
         "properties": {
-          "type": { "type": "string", "enum": ["buy", "sell"] },
-          "assetType": { "type": "string", "enum": ["stock", "crypto"] },
-          "ticker": { "type": "string" },
-          "tradeDate": { "type": "string", "format": "date" },
-          "quantity": { "type": "number" },
-          "price": { "type": "number" },
-          "accountId": { "type": "string" },
-          "reason": { "type": "string", "nullable": true }
+          "type": {
+            "type": "string",
+            "enum": [
+              "buy",
+              "sell"
+            ]
+          },
+          "assetType": {
+            "type": "string",
+            "enum": [
+              "stock",
+              "crypto"
+            ]
+          },
+          "ticker": {
+            "type": "string"
+          },
+          "tradeDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "price": {
+            "type": "number"
+          },
+          "accountId": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true
+          }
         }
       },
       "PortfolioSummary": {
         "type": "object",
         "properties": {
-          "accounts": { "type": "array", "items": { "$ref": "#/components/schemas/Account" } },
-          "assets": { "type": "array", "items": { "type": "object" } },
-          "totalValue": { "type": "number" }
+          "accounts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Account"
+            }
+          },
+          "assets": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "totalValue": {
+            "type": "number"
+          }
         }
+      },
+      "Holding": {
+        "type": "object",
+        "properties": {
+          "ticker": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "averagePrice": {
+            "type": "number"
+          },
+          "assetType": {
+            "type": "string",
+            "enum": [
+              "stock",
+              "crypto"
+            ]
+          },
+          "currency": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticker",
+          "quantity",
+          "averagePrice",
+          "assetType",
+          "currency"
+        ]
       }
     }
   }

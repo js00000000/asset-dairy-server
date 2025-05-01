@@ -9,17 +9,22 @@ import (
 	"time"
 
 	"asset-dairy/models"
+	"asset-dairy/services"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
 type TradeHandler struct {
-	DB *sql.DB
+	DB      *sql.DB
+	service services.TradeServiceInterface
 }
 
-func NewTradeHandler(db *sql.DB) *TradeHandler {
-	return &TradeHandler{DB: db}
+func NewTradeHandler(db *sql.DB, tradeService services.TradeServiceInterface) *TradeHandler {
+	return &TradeHandler{
+		DB:      db,
+		service: tradeService,
+	}
 }
 
 // List all trades for a given account or user
@@ -29,26 +34,14 @@ func (h *TradeHandler) ListTrades(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
-	rows, err := h.DB.Query("SELECT id, type, asset_type, ticker, trade_date, quantity, price, currency, account_id, reason FROM trades WHERE user_id = $1", userID)
+
+	trades, err := h.service.ListTrades(userID.(string))
 	if err != nil {
 		log.Println("Failed to fetch trades:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch trades"})
 		return
 	}
-	defer rows.Close()
-	trades := []models.Trade{}
-	for rows.Next() {
-		var t models.Trade
-		var reason sql.NullString
-		if err := rows.Scan(&t.ID, &t.Type, &t.AssetType, &t.Ticker, &t.TradeDate, &t.Quantity, &t.Price, &t.Currency, &t.AccountID, &reason); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to scan trade"})
-			return
-		}
-		if reason.Valid {
-			t.Reason = &reason.String
-		}
-		trades = append(trades, t)
-	}
+
 	c.JSON(http.StatusOK, trades)
 }
 
