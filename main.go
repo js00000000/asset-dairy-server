@@ -3,7 +3,7 @@ package main
 import (
 	"asset-dairy/db"
 	"asset-dairy/handlers"
-	"asset-dairy/middleware"
+	"asset-dairy/routes"
 	"asset-dairy/services"
 	"fmt"
 	"log"
@@ -81,46 +81,17 @@ func main() {
 	})
 
 	authService := services.NewAuthService(dbConn)
-	authHandler := handlers.NewAuthHandler(authService)
 	profileService := services.NewProfileService(dbConn)
-	profileHandler := handlers.NewProfileHandler(profileService)
 	accountService := services.NewAccountService(dbConn)
-	accountHandler := handlers.NewAccountHandler(accountService)
 	tradeService := services.NewTradeService(dbConn)
 	holdingService := services.NewHoldingService(tradeService)
+
+	authHandler := handlers.NewAuthHandler(authService)
+	profileHandler := handlers.NewProfileHandler(profileService)
+	accountHandler := handlers.NewAccountHandler(accountService)
 	tradeHandler := handlers.NewTradeHandler(dbConn, tradeService)
 	holdingHandler := handlers.NewHoldingHandler(holdingService)
-
-	// Public routes
-	public := r.Group("/auth")
-	{
-		public.POST("/sign-in", authHandler.SignIn)
-		public.POST("/sign-up", authHandler.SignUp)
-		public.POST("/refresh", authHandler.RefreshToken)
-	}
-
-	// Protected routes (JWT middleware to be added)
-	protected := r.Group("/")
-	{
-		protected.Use(middleware.JWTAuthMiddleware())
-		protected.POST("/auth/logout", authHandler.Logout)
-		protected.POST("/profile/change-password", profileHandler.ChangePassword)
-		protected.GET("/profile", profileHandler.GetProfile)
-		protected.PUT("/profile", profileHandler.UpdateProfile)
-		protected.GET("/accounts", accountHandler.ListAccounts)
-		protected.POST("/accounts", accountHandler.CreateAccount)
-		protected.PUT("/accounts/:id", accountHandler.UpdateAccount)
-		protected.DELETE("/accounts/:id", accountHandler.DeleteAccount)
-
-		// Trade routes
-		protected.GET("/trades", tradeHandler.ListTrades)
-		protected.POST("/trades", tradeHandler.CreateTrade)
-		protected.PUT("/trades/:id", tradeHandler.UpdateTrade)
-		protected.DELETE("/trades/:id", tradeHandler.DeleteTrade)
-
-		// Asset routes
-		protected.GET("/holdings", holdingHandler.ListHoldings)
-	}
+	routes.SetupRoutes(r, authHandler, profileHandler, accountHandler, tradeHandler, holdingHandler)
 
 	r.GET("/swagger/*any", ginSwaggerHandler()) // Swagger UI placeholder
 
