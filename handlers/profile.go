@@ -35,8 +35,8 @@ func (h *ProfileHandler) GetProfile(c *gin.Context) {
 
 	// Fetch investment profile
 	var investmentProfile models.InvestmentProfile
-	err = h.DB.QueryRow("SELECT id, user_id, age, max_acceptable_short_term_loss_percentage, expected_annualized_rate_of_return, time_horizon, years_investing FROM investment_profiles WHERE user_id = $1", userID).
-		Scan(&investmentProfile.Id, &investmentProfile.UserId, &investmentProfile.Age, &investmentProfile.MaxAcceptableShortTermLossPercentage, &investmentProfile.ExpectedAnnualizedRateOfReturn, &investmentProfile.TimeHorizon, &investmentProfile.YearsInvesting)
+	err = h.DB.QueryRow("SELECT id, user_id, age, max_acceptable_short_term_loss_percentage, expected_annualized_rate_of_return, time_horizon, years_investing, monthly_cash_flow, default_currency FROM investment_profiles WHERE user_id = $1", userID).
+		Scan(&investmentProfile.Id, &investmentProfile.UserId, &investmentProfile.Age, &investmentProfile.MaxAcceptableShortTermLossPercentage, &investmentProfile.ExpectedAnnualizedRateOfReturn, &investmentProfile.TimeHorizon, &investmentProfile.YearsInvesting, &investmentProfile.MonthlyCashFlow, &investmentProfile.DefaultCurrency)
 	if err == sql.ErrNoRows {
 		// No investment profile found, return nil for this field
 		c.JSON(http.StatusOK, models.ProfileResponse{
@@ -47,6 +47,7 @@ func (h *ProfileHandler) GetProfile(c *gin.Context) {
 		})
 		return
 	} else if err != nil {
+		c.Error(err) // Log the error
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch investment profile"})
 		return
 	}
@@ -123,14 +124,16 @@ func (h *ProfileHandler) UpdateProfile(c *gin.Context) {
 	}
 
 	// Upsert investment profile in investment_profiles table
-	_, err = h.DB.Exec(`INSERT INTO investment_profiles (id, user_id, age, max_acceptable_short_term_loss_percentage, expected_annualized_rate_of_return, time_horizon, years_investing)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	_, err = h.DB.Exec(`INSERT INTO investment_profiles (id, user_id, age, max_acceptable_short_term_loss_percentage, expected_annualized_rate_of_return, time_horizon, years_investing, monthly_cash_flow, default_currency)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		ON CONFLICT (user_id) DO UPDATE SET
 			age = EXCLUDED.age,
 			max_acceptable_short_term_loss_percentage = EXCLUDED.max_acceptable_short_term_loss_percentage,
 			expected_annualized_rate_of_return = EXCLUDED.expected_annualized_rate_of_return,
 			time_horizon = EXCLUDED.time_horizon,
-			years_investing = EXCLUDED.years_investing`,
+			years_investing = EXCLUDED.years_investing,
+			monthly_cash_flow = EXCLUDED.monthly_cash_flow,
+			default_currency = EXCLUDED.default_currency`,
 		uuid.New().String(),
 		userID,
 		req.InvestmentProfile.Age,
@@ -138,6 +141,8 @@ func (h *ProfileHandler) UpdateProfile(c *gin.Context) {
 		req.InvestmentProfile.ExpectedAnnualizedRateOfReturn,
 		req.InvestmentProfile.TimeHorizon,
 		req.InvestmentProfile.YearsInvesting,
+		req.InvestmentProfile.MonthlyCashFlow,
+		req.InvestmentProfile.DefaultCurrency,
 	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update investment profile"})
