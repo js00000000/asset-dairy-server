@@ -2,9 +2,8 @@ package services
 
 import (
 	"asset-dairy/models"
-	"database/sql"
+	"asset-dairy/repositories"
 	"errors"
-	"log"
 	"os"
 	"time"
 
@@ -24,13 +23,11 @@ type AuthServiceInterface interface {
 }
 
 type AuthService struct {
-	db *sql.DB
+	repo repositories.AuthRepositoryInterface
 }
 
-func NewAuthService(db *sql.DB) *AuthService {
-	return &AuthService{
-		db: db,
-	}
+func NewAuthService(repo repositories.AuthRepositoryInterface) *AuthService {
+	return &AuthService{repo: repo}
 }
 
 func (s *AuthService) SignUp(req *models.SignUpRequest) (*models.User, error) {
@@ -39,52 +36,20 @@ func (s *AuthService) SignUp(req *models.SignUpRequest) (*models.User, error) {
 		return nil, errors.New("failed to hash password")
 	}
 
-	id := uuid.New().String()
-	err = s.db.QueryRow(
-		`INSERT INTO users (id, email, name, username, password_hash, created_at) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-		id, req.Email, req.Name, req.Username, string(hashed), time.Now(),
-	).Scan(&id)
+	user := &models.User{
+		ID:        uuid.New().String(),
+		Email:     req.Email,
+		Name:      req.Name,
+		Username:  req.Username,
+		CreatedAt: time.Now(),
+	}
+
+	err = s.repo.CreateUser(user, string(hashed))
 	if err != nil {
-		log.Println("Failed to insert user:", err)
 		return nil, errors.New("email may already be registered")
 	}
 
-	return &models.User{
-		ID:        id,
-		Email:     req.Email,
-		Name:      req.Name,
-		CreatedAt: time.Now(),
-	}, nil
-}
-
-// generateAccessToken creates a JWT for a given user ID and email
-func generateAccessToken(userID string, email string) (string, error) {
-	secret := os.Getenv("JWT_SECRET")
-	if secret == "" {
-		return "", errors.New("JWT secret not set in environment")
-	}
-	claims := jwt.MapClaims{
-		"user_id": userID,
-		"email":   email,
-		"exp":     time.Now().Add(15 * time.Minute).Unix(), // 15 min expiry
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(secret))
-}
-
-// generateRefreshToken creates a refresh token JWT for a given user ID and email
-func generateRefreshToken(userID string, email string) (string, error) {
-	secret := os.Getenv("JWT_REFRESH_SECRET")
-	if secret == "" {
-		return "", errors.New("JWT refresh secret not set in environment")
-	}
-	claims := jwt.MapClaims{
-		"user_id": userID,
-		"email":   email,
-		"exp":     time.Now().Add(7 * 24 * time.Hour).Unix(), // 7 days
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(secret))
+	return user, nil
 }
 
 func (s *AuthService) SignIn(email, password string) (*models.AuthResponse, error) {
@@ -92,10 +57,7 @@ func (s *AuthService) SignIn(email, password string) (*models.AuthResponse, erro
 		return nil, errors.New("email is required")
 	}
 
-	var id, name, username, passwordHash string
-	var createdAt time.Time
-
-	err := s.db.QueryRow(`SELECT id, email, name, username, password_hash, created_at FROM users WHERE email = $1`, email).Scan(&id, &email, &name, &username, &passwordHash, &createdAt)
+	user, passwordHash, err := s.repo.FindUserByEmail(email)
 	if err != nil {
 		return nil, errors.New("invalid credentials")
 	}
@@ -104,25 +66,61 @@ func (s *AuthService) SignIn(email, password string) (*models.AuthResponse, erro
 		return nil, errors.New("invalid credentials")
 	}
 
-	token, refreshToken, err := generateTokens(id, email)
+	token, refreshToken, err := generateTokens(user.ID, user.Email)
 	if err != nil {
 		return nil, err
 	}
 
 	return &models.AuthResponse{
-		Token: token,
-		User: models.User{
-			ID:        id,
-			Email:     email,
-			Name:      name,
-			Username:  username,
-			CreatedAt: createdAt,
-		},
+		Token:        token,
+		User:         *user,
 		RefreshToken: refreshToken,
 	}, nil
 }
 
-// ValidateRefreshToken checks if the given refresh token is valid
+func (s *AuthService) RefreshToken(refreshToken string) (string, string, error) {
+	claims, err := validateRefreshToken(refreshToken)
+	if err != nil {
+		return "", "", err
+	}
+
+	userID, ok1 := claims["user_id"].(string)
+	email, ok2 := claims["email"].(string)
+	if !ok1 || !ok2 {
+		return "", "", ErrInvalidToken
+	}
+
+	return generateTokens(userID, email)
+}
+
+func generateAccessToken(userID string, email string) (string, error) {
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		return "", errors.New("JWT secret not set in environment")
+	}
+	claims := jwt.MapClaims{
+		"user_id": userID,
+		"email":   email,
+		"exp":     time.Now().Add(15 * time.Minute).Unix(),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(secret))
+}
+
+func generateRefreshToken(userID string, email string) (string, error) {
+	secret := os.Getenv("JWT_REFRESH_SECRET")
+	if secret == "" {
+		return "", errors.New("JWT refresh secret not set in environment")
+	}
+	claims := jwt.MapClaims{
+		"user_id": userID,
+		"email":   email,
+		"exp":     time.Now().Add(7 * 24 * time.Hour).Unix(),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(secret))
+}
+
 func validateRefreshToken(refreshToken string) (jwt.MapClaims, error) {
 	secret := os.Getenv("JWT_REFRESH_SECRET")
 	token, err := jwt.Parse(refreshToken, func(token *jwt.Token) (interface{}, error) {
@@ -143,7 +141,6 @@ func validateRefreshToken(refreshToken string) (jwt.MapClaims, error) {
 	return claims, nil
 }
 
-// GenerateTokens creates new access and refresh tokens for a user
 func generateTokens(userID, email string) (string, string, error) {
 	accessToken, err := generateAccessToken(userID, email)
 	if err != nil {
@@ -156,23 +153,4 @@ func generateTokens(userID, email string) (string, string, error) {
 	}
 
 	return accessToken, refreshToken, nil
-}
-
-// RefreshToken validates the existing refresh token and generates new tokens
-func (s *AuthService) RefreshToken(refreshToken string) (string, string, error) {
-	// First validate the refresh token
-	claims, err := validateRefreshToken(refreshToken)
-	if err != nil {
-		return "", "", err
-	}
-
-	// Extract user details from claims
-	userID, ok1 := claims["user_id"].(string)
-	email, ok2 := claims["email"].(string)
-	if !ok1 || !ok2 {
-		return "", "", ErrInvalidToken
-	}
-
-	// Generate new tokens
-	return generateTokens(userID, email)
 }

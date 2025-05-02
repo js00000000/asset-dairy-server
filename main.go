@@ -3,6 +3,7 @@ package main
 import (
 	"asset-dairy/db"
 	"asset-dairy/handlers"
+	"asset-dairy/repositories"
 	"asset-dairy/routes"
 	"asset-dairy/services"
 	"fmt"
@@ -80,12 +81,20 @@ func main() {
 		c.Next()
 	})
 
-	authService := services.NewAuthService(dbConn)
-	profileService := services.NewProfileService(dbConn)
-	accountService := services.NewAccountService(dbConn)
-	tradeService := services.NewTradeService(dbConn)
+	// Initialize repositories
+	profileRepo := repositories.NewProfileRepository(dbConn)
+	tradeRepo := repositories.NewTradeRepository(dbConn)
+	accountRepo := repositories.NewAccountRepository(dbConn)
+	authRepo := repositories.NewAuthRepository(dbConn)
+
+	// Initialize services
+	authService := services.NewAuthService(authRepo)
+	profileService := services.NewProfileService(profileRepo)
+	accountService := services.NewAccountService(accountRepo)
+	tradeService := services.NewTradeService(tradeRepo)
 	holdingService := services.NewHoldingService(tradeService)
 
+	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(authService)
 	profileHandler := handlers.NewProfileHandler(profileService)
 	accountHandler := handlers.NewAccountHandler(accountService)
