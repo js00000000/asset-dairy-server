@@ -18,6 +18,23 @@ func (m *MockTradeService) ListTrades(userID string) ([]models.Trade, error) {
 	return args.Get(0).([]models.Trade), args.Error(1)
 }
 
+// Add stub methods to satisfy TradeServiceInterface
+func (m *MockTradeService) CreateTrade(userID string, trade models.Trade) error {
+	panic("not implemented")
+}
+func (m *MockTradeService) UpdateTrade(userID, tradeID string, req models.TradeUpdateRequest) (*models.Trade, error) {
+	panic("not implemented")
+}
+func (m *MockTradeService) DeleteTrade(userID, tradeID string) (bool, error) {
+	panic("not implemented")
+}
+func (m *MockTradeService) IsAccountOwnedByUser(accountID, userID string) (bool, error) {
+	panic("not implemented")
+}
+func (m *MockTradeService) IsTradeOwnedByUser(tradeID, userID string) (bool, error) {
+	panic("not implemented")
+}
+
 func TestListAssets(t *testing.T) {
 	tests := []struct {
 		name           string

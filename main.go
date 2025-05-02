@@ -98,7 +98,7 @@ func main() {
 	authHandler := handlers.NewAuthHandler(authService)
 	profileHandler := handlers.NewProfileHandler(profileService)
 	accountHandler := handlers.NewAccountHandler(accountService)
-	tradeHandler := handlers.NewTradeHandler(dbConn, tradeService)
+	tradeHandler := handlers.NewTradeHandler(tradeService)
 	holdingHandler := handlers.NewHoldingHandler(holdingService)
 	routes.SetupRoutes(r, authHandler, profileHandler, accountHandler, tradeHandler, holdingHandler)
 
