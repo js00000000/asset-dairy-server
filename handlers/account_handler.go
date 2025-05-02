@@ -1,22 +1,20 @@
 package handlers
 
 import (
-	"database/sql"
-	"log"
 	"net/http"
 
 	"asset-dairy/models"
+	"asset-dairy/services"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 type AccountHandler struct {
-	DB *sql.DB
+	AccountService services.AccountServiceInterface
 }
 
-func NewAccountHandler(db *sql.DB) *AccountHandler {
-	return &AccountHandler{DB: db}
+func NewAccountHandler(accountService services.AccountServiceInterface) *AccountHandler {
+	return &AccountHandler{AccountService: accountService}
 }
 
 // ListAccounts returns all accounts for the current user
@@ -26,21 +24,10 @@ func (h *AccountHandler) ListAccounts(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
-	rows, err := h.DB.Query("SELECT id, name, currency, balance FROM accounts WHERE user_id = $1", userID)
+	accounts, err := h.AccountService.ListAccounts(userID.(string))
 	if err != nil {
-		log.Println("Failed to fetch accounts:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch accounts"})
 		return
-	}
-	defer rows.Close()
-	accounts := []models.Account{}
-	for rows.Next() {
-		var acc models.Account
-		if err := rows.Scan(&acc.ID, &acc.Name, &acc.Currency, &acc.Balance); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to scan account"})
-			return
-		}
-		accounts = append(accounts, acc)
 	}
 	c.JSON(http.StatusOK, accounts)
 }
@@ -57,13 +44,11 @@ func (h *AccountHandler) CreateAccount(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	var id string
-	err := h.DB.QueryRow("INSERT INTO accounts (id, user_id, name, currency, balance) VALUES ($1, $2, $3, $4, $5) RETURNING id", uuid.New().String(), userID, req.Name, req.Currency, req.Balance).Scan(&id)
+	acc, err := h.AccountService.CreateAccount(userID.(string), req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create account"})
 		return
 	}
-	acc := models.Account{ID: id, Name: req.Name, Currency: req.Currency, Balance: req.Balance}
 	c.JSON(http.StatusCreated, acc)
 }
 
@@ -80,13 +65,11 @@ func (h *AccountHandler) UpdateAccount(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	_, err := h.DB.Exec("UPDATE accounts SET name = $1, currency = $2, balance = $3 WHERE id = $4 AND user_id = $5", req.Name, req.Currency, req.Balance, accID, userID)
+	acc, err := h.AccountService.UpdateAccount(userID.(string), accID, req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update account"})
 		return
 	}
-	var acc models.Account
-	h.DB.QueryRow("SELECT id, name, currency, balance FROM accounts WHERE id = $1 AND user_id = $2", accID, userID).Scan(&acc.ID, &acc.Name, &acc.Currency, &acc.Balance)
 	c.JSON(http.StatusOK, acc)
 }
 
@@ -98,7 +81,7 @@ func (h *AccountHandler) DeleteAccount(c *gin.Context) {
 		return
 	}
 	accID := c.Param("id")
-	_, err := h.DB.Exec("DELETE FROM accounts WHERE id = $1 AND user_id = $2", accID, userID)
+	err := h.AccountService.DeleteAccount(userID.(string), accID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete account"})
 		return
