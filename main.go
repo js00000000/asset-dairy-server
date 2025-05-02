@@ -52,7 +52,6 @@ func main() {
 		log.Fatalf("Migration failed: %v", err)
 	}
 	log.Println("Database migrated successfully")
-	authHandler := handlers.NewAuthHandler(dbConn)
 
 	r := gin.Default()
 
@@ -81,6 +80,7 @@ func main() {
 		c.Next()
 	})
 
+	authHandler := handlers.NewAuthHandler(dbConn)
 	profileHandler := handlers.NewProfileHandler(dbConn)
 	accountHandler := handlers.NewAccountHandler(dbConn)
 	tradeService := services.NewTradeService(dbConn)
