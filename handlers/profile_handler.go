@@ -1,22 +1,23 @@
 package handlers
 
 import (
-	"database/sql"
+	"asset-dairy/models"
+	"asset-dairy/services"
 	"net/http"
 
-	"asset-dairy/models"
-
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
 )
 
+// ProfileHandler handles profile-related HTTP requests
 type ProfileHandler struct {
-	DB *sql.DB
+	profileService services.ProfileServiceInterface
 }
 
-func NewProfileHandler(db *sql.DB) *ProfileHandler {
-	return &ProfileHandler{DB: db}
+// NewProfileHandler creates a new ProfileHandler instance
+func NewProfileHandler(profileService services.ProfileServiceInterface) *ProfileHandler {
+	return &ProfileHandler{
+		profileService: profileService,
+	}
 }
 
 // GetProfile returns the current user's profile
@@ -26,39 +27,14 @@ func (h *ProfileHandler) GetProfile(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
-	var user models.User
-	err := h.DB.QueryRow("SELECT id, name, email, username FROM users WHERE id = $1", userID).Scan(&user.ID, &user.Name, &user.Email, &user.Username)
+
+	profile, err := h.profileService.GetProfile(userID.(string))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "User not found"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Fetch investment profile
-	var investmentProfile models.InvestmentProfile
-	err = h.DB.QueryRow("SELECT id, user_id, age, max_acceptable_short_term_loss_percentage, expected_annualized_rate_of_return, time_horizon, years_investing, monthly_cash_flow, default_currency FROM investment_profiles WHERE user_id = $1", userID).
-		Scan(&investmentProfile.Id, &investmentProfile.UserId, &investmentProfile.Age, &investmentProfile.MaxAcceptableShortTermLossPercentage, &investmentProfile.ExpectedAnnualizedRateOfReturn, &investmentProfile.TimeHorizon, &investmentProfile.YearsInvesting, &investmentProfile.MonthlyCashFlow, &investmentProfile.DefaultCurrency)
-	if err == sql.ErrNoRows {
-		// No investment profile found, return nil for this field
-		c.JSON(http.StatusOK, models.ProfileResponse{
-			ID:       user.ID,
-			Email:    user.Email,
-			Name:     user.Name,
-			Username: user.Username,
-		})
-		return
-	} else if err != nil {
-		c.Error(err) // Log the error
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch investment profile"})
-		return
-	}
-
-	c.JSON(http.StatusOK, models.ProfileResponse{
-		ID:                user.ID,
-		Email:             user.Email,
-		Name:              user.Name,
-		Username:          user.Username,
-		InvestmentProfile: &investmentProfile,
-	})
+	c.JSON(http.StatusOK, profile)
 }
 
 // ChangePassword changes the current user's password
@@ -68,35 +44,19 @@ func (h *ProfileHandler) ChangePassword(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
+
 	var req models.ChangePasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	// Fetch current password hash
-	var passwordHash string
-	err := h.DB.QueryRow("SELECT password_hash FROM users WHERE id = $1", userID).Scan(&passwordHash)
+
+	err := h.profileService.ChangePassword(userID.(string), req.CurrentPassword, req.NewPassword)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "User not found"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	// Compare current password
-	if err := bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(req.CurrentPassword)); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Current password is incorrect"})
-		return
-	}
-	// Hash new password
-	hashed, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash new password"})
-		return
-	}
-	// Update password in DB
-	_, err = h.DB.Exec("UPDATE users SET password_hash = $1 WHERE id = $2", string(hashed), userID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update password"})
-		return
-	}
+
 	c.Status(http.StatusNoContent)
 }
 
@@ -107,49 +67,18 @@ func (h *ProfileHandler) UpdateProfile(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
+
 	var req models.UserUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	// Update name and username in users table
-	_, err := h.DB.Exec(`UPDATE users SET name = $1, username = $2 WHERE id = $3`,
-		req.Name,
-		req.Username,
-		userID,
-	)
+
+	user, err := h.profileService.UpdateProfile(userID.(string), &req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update profile"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Upsert investment profile in investment_profiles table
-	_, err = h.DB.Exec(`INSERT INTO investment_profiles (id, user_id, age, max_acceptable_short_term_loss_percentage, expected_annualized_rate_of_return, time_horizon, years_investing, monthly_cash_flow, default_currency)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-		ON CONFLICT (user_id) DO UPDATE SET
-			age = EXCLUDED.age,
-			max_acceptable_short_term_loss_percentage = EXCLUDED.max_acceptable_short_term_loss_percentage,
-			expected_annualized_rate_of_return = EXCLUDED.expected_annualized_rate_of_return,
-			time_horizon = EXCLUDED.time_horizon,
-			years_investing = EXCLUDED.years_investing,
-			monthly_cash_flow = EXCLUDED.monthly_cash_flow,
-			default_currency = EXCLUDED.default_currency`,
-		uuid.New().String(),
-		userID,
-		req.InvestmentProfile.Age,
-		req.InvestmentProfile.MaxAcceptableShortTermLossPercentage,
-		req.InvestmentProfile.ExpectedAnnualizedRateOfReturn,
-		req.InvestmentProfile.TimeHorizon,
-		req.InvestmentProfile.YearsInvesting,
-		req.InvestmentProfile.MonthlyCashFlow,
-		req.InvestmentProfile.DefaultCurrency,
-	)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update investment profile"})
-		return
-	}
-
-	var user models.User
-	h.DB.QueryRow("SELECT id, name, email, username FROM users WHERE id = $1", userID).Scan(&user.ID, &user.Name, &user.Email, &user.Username)
 	c.JSON(http.StatusOK, user)
 }

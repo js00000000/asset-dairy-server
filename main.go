@@ -80,8 +80,10 @@ func main() {
 		c.Next()
 	})
 
-	authHandler := handlers.NewAuthHandler(dbConn)
-	profileHandler := handlers.NewProfileHandler(dbConn)
+	authService := services.NewAuthService(dbConn)
+	authHandler := handlers.NewAuthHandler(authService)
+	profileService := services.NewProfileService(dbConn)
+	profileHandler := handlers.NewProfileHandler(profileService)
 	accountHandler := handlers.NewAccountHandler(dbConn)
 	tradeService := services.NewTradeService(dbConn)
 	holdingService := services.NewHoldingService(tradeService)
