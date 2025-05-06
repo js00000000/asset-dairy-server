@@ -10,8 +10,11 @@ import (
 )
 
 type AuthRepositoryInterface interface {
-	CreateUser(user *models.User, passwordHash string) error
-	FindUserByEmail(email string) (*models.User, string, error)
+	CreateUser(user *models.User, hashedPassword string) error
+	FindUserByEmail(email string) (*models.User, error)
+	StoreVerificationCode(email, code string, expiry time.Duration) error
+	ValidateVerificationCode(email, code string) (bool, error)
+	UpdateUserPassword(email, hashedPassword string) error
 }
 
 type AuthRepository struct {
@@ -22,16 +25,10 @@ func NewAuthRepository(db *gorm.DB) *AuthRepository {
 	return &AuthRepository{DB: db}
 }
 
-func (r *AuthRepository) CreateUser(user *models.User, passwordHash string) error {
-	gormUser := &models.User{
-		ID:            user.ID,
-		Email:         user.Email,
-		Name:          user.Name,
-		Username:      user.Username,
-		Password_Hash: passwordHash,
-	}
+func (r *AuthRepository) CreateUser(user *models.User, hashedPassword string) error {
+	user.Password_Hash = hashedPassword
 
-	result := r.DB.Create(gormUser)
+	result := r.DB.Create(user)
 	if result.Error != nil {
 		log.Println("Failed to insert user:", result.Error)
 		return result.Error
@@ -39,21 +36,64 @@ func (r *AuthRepository) CreateUser(user *models.User, passwordHash string) erro
 	return nil
 }
 
-func (r *AuthRepository) FindUserByEmail(email string) (*models.User, string, error) {
-	var gormUser models.User
-	result := r.DB.Where(&models.User{Email: email}).First(&gormUser)
+func (r *AuthRepository) FindUserByEmail(email string) (*models.User, error) {
+	var user models.User
+	if err := r.DB.Where(&models.User{Email: email}).First(&user).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (r *AuthRepository) UpdateUserPassword(email, hashedPassword string) error {
+	var user models.User
+	result := r.DB.Where(&models.User{Email: email}).First(&user)
 	if result.Error != nil {
 		log.Println("Failed to find user:", result.Error)
-		return nil, "", result.Error
+		return result.Error
 	}
 
-	user := &models.User{
-		ID:        gormUser.ID,
-		Email:     gormUser.Email,
-		Name:      gormUser.Name,
-		Username:  gormUser.Username,
-		CreatedAt: time.Now(), // Use current time as a fallback
+	user.Password_Hash = hashedPassword
+	result = r.DB.Save(&user)
+	if result.Error != nil {
+		log.Println("Failed to update password:", result.Error)
+		return result.Error
+	}
+	return nil
+}
+
+func (r *AuthRepository) StoreVerificationCode(email, code string, expiry time.Duration) error {
+	verificationCode := &models.VerificationCode{
+		Email:      email,
+		Code:       code,
+		ExpiresAt:  time.Now().Add(expiry),
 	}
 
-	return user, gormUser.Password_Hash, nil
+	result := r.DB.Create(verificationCode)
+	if result.Error != nil {
+		log.Println("Failed to store verification code:", result.Error)
+		return result.Error
+	}
+	return nil
+}
+
+func (r *AuthRepository) ValidateVerificationCode(email, code string) (bool, error) {
+	var verificationCode models.VerificationCode
+	result := r.DB.Where(&models.VerificationCode{
+		Email: email,
+		Code:  code,
+	}).First(&verificationCode)
+
+	if result.Error != nil {
+		return false, result.Error
+	}
+
+	// Check if the verification code has expired
+	if time.Now().After(verificationCode.ExpiresAt) {
+		return false, nil
+	}
+
+	// Optional: Delete the verification code after successful validation
+	r.DB.Delete(&verificationCode)
+
+	return true, nil
 }

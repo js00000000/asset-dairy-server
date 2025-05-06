@@ -12,6 +12,56 @@
     }
   ],
   "paths": {
+    "/auth/forgot-password": {
+      "post": {
+        "summary": "Initiate Password Reset",
+        "description": "Request a verification code to reset password",
+        "tags": ["Authentication"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Verification code sent successfully"
+          },
+          "400": {
+            "description": "Invalid email or other error"
+          }
+        }
+      }
+    },
+    "/auth/verify-reset-code": {
+      "post": {
+        "summary": "Verify Password Reset Code",
+        "description": "Verify the reset code and generate a new temporary password",
+        "tags": ["Authentication"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyCodeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Password reset successfully"
+          },
+          "400": {
+            "description": "Invalid verification code or other error"
+          }
+        }
+      }
+    },
     "/auth/sign-in": {
       "post": {
         "summary": "Sign in",
@@ -595,6 +645,52 @@
           }
         }
       }
+    },
+    "/forgot-password": {
+      "post": {
+        "summary": "Forgot password",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Forgot password email sent"
+          },
+          "400": {
+            "description": "Bad Request"
+          }
+        }
+      }
+    },
+    "/verify-code": {
+      "post": {
+        "summary": "Verify code",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyCodeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Code verified"
+          },
+          "400": {
+            "description": "Bad Request"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -606,6 +702,32 @@
       }
     },
     "schemas": {
+        "ForgotPasswordRequest": {
+            "type": "object",
+            "required": ["email"],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "User's email address"
+                }
+            }
+        },
+        "VerifyCodeRequest": {
+            "type": "object",
+            "required": ["email", "code"],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "User's email address"
+                },
+                "code": {
+                    "type": "string",
+                    "description": "Verification code sent to the user's email"
+                }
+            }
+        },
       "LoginRequest": {
         "type": "object",
         "properties": {

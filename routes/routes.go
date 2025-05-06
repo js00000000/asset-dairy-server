@@ -20,6 +20,8 @@ func SetupRoutes(r *gin.Engine,
 		public.POST("/sign-in", authHandler.SignIn)
 		public.POST("/sign-up", authHandler.SignUp)
 		public.POST("/refresh", authHandler.RefreshToken)
+		public.POST("/forgot-password", authHandler.ForgotPassword)
+		public.POST("/verify-reset-code", authHandler.VerifyResetCode)
 	}
 
 	// Protected routes

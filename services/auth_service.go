@@ -3,8 +3,13 @@ package services
 import (
 	"asset-dairy/models"
 	"asset-dairy/repositories"
+	"bytes"
 	"errors"
+	"fmt"
+	"math/rand"
+	"net/smtp"
 	"os"
+	"text/template"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -20,14 +25,16 @@ type AuthServiceInterface interface {
 	SignUp(req *models.UserSignUpRequest) (*models.AuthResponse, error)
 	SignIn(email, password string) (*models.AuthResponse, error)
 	RefreshToken(refreshToken string) (string, string, error)
+	ForgotPassword(email string) error
+	VerifyResetCode(email, code string) error
 }
 
 type AuthService struct {
-	repo repositories.AuthRepositoryInterface
+	authRepo repositories.AuthRepositoryInterface
 }
 
-func NewAuthService(repo repositories.AuthRepositoryInterface) *AuthService {
-	return &AuthService{repo: repo}
+func NewAuthService(authRepo repositories.AuthRepositoryInterface) *AuthService {
+	return &AuthService{authRepo: authRepo}
 }
 
 func (s *AuthService) SignUp(req *models.UserSignUpRequest) (*models.AuthResponse, error) {
@@ -44,7 +51,7 @@ func (s *AuthService) SignUp(req *models.UserSignUpRequest) (*models.AuthRespons
 		CreatedAt: time.Now(),
 	}
 
-	err = s.repo.CreateUser(user, string(hashed))
+	err = s.authRepo.CreateUser(user, string(hashed))
 	if err != nil {
 		return nil, errors.New("email may already be registered")
 	}
@@ -66,12 +73,13 @@ func (s *AuthService) SignIn(email, password string) (*models.AuthResponse, erro
 		return nil, errors.New("email is required")
 	}
 
-	user, passwordHash, err := s.repo.FindUserByEmail(email)
+	user, err := s.authRepo.FindUserByEmail(email)
 	if err != nil {
-		return nil, errors.New("invalid credentials")
+		return nil, errors.New("user not found")
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(password)); err != nil {
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password_Hash), []byte(password))
+	if err != nil {
 		return nil, errors.New("invalid credentials")
 	}
 
@@ -82,8 +90,8 @@ func (s *AuthService) SignIn(email, password string) (*models.AuthResponse, erro
 
 	return &models.AuthResponse{
 		Token:        token,
-		User:         *user,
 		RefreshToken: refreshToken,
+		User:         *user,
 	}, nil
 }
 
@@ -162,4 +170,180 @@ func generateTokens(userID, email string) (string, string, error) {
 	}
 
 	return accessToken, refreshToken, nil
+}
+
+func (s *AuthService) ForgotPassword(email string) error {
+	// Check if user exists
+	user, err := s.authRepo.FindUserByEmail(email)
+	if err != nil || user == nil {
+		return errors.New("user not found")
+	}
+
+	// Generate 6-digit verification code
+	verificationCode := generateVerificationCode()
+
+	// Store verification code with expiry
+	err = s.authRepo.StoreVerificationCode(email, verificationCode, 3*time.Minute)
+	if err != nil {
+		return errors.New("failed to generate verification code")
+	}
+
+	// Send verification code via email
+	err = sendVerificationEmail(email, verificationCode)
+	if err != nil {
+		return errors.New("failed to send verification email")
+	}
+
+	return nil
+}
+
+func (s *AuthService) VerifyResetCode(email, code string) error {
+	// Verify the code
+	isValid, err := s.authRepo.ValidateVerificationCode(email, code)
+	if err != nil || !isValid {
+		return errors.New("invalid or expired verification code")
+	}
+
+	// Generate a new random password
+	newPassword := generateRandomPassword()
+
+	// Hash the new password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return errors.New("failed to generate new password")
+	}
+
+	// Update user's password
+	err = s.authRepo.UpdateUserPassword(email, string(hashedPassword))
+	if err != nil {
+		return errors.New("failed to update password")
+	}
+
+	// Send password via email
+	err = sendPasswordResetEmail(email, newPassword)
+	if err != nil {
+		return errors.New("failed to send password reset email")
+	}
+
+	return nil
+}
+
+func sendPasswordResetEmail(email, newPassword string) error {
+	// Email configuration
+	from := os.Getenv("EMAIL_FROM")
+	password := os.Getenv("EMAIL_PASSWORD")
+	host := os.Getenv("EMAIL_HOST")
+	port := os.Getenv("EMAIL_PORT")
+
+	// Validate email configuration
+	if from == "" || password == "" || host == "" || port == "" {
+		return errors.New("incomplete email configuration")
+	}
+
+	// Prepare email body
+	var body bytes.Buffer
+	templ := template.Must(template.New("passwordReset").Parse(`From: {{.From}}
+To: {{.To}}
+Subject: Asset Dairy Password Reset
+Content-Type: text/plain; charset=UTF-8
+
+Your password has been reset. Please log in with the following temporary password:
+
+{{.Password}}
+
+Please change this password immediately after logging in.
+
+Best regards,
+Asset Dairy Team`))
+
+	err := templ.Execute(&body, struct {
+		From     string
+		To       string
+		Password string
+	}{
+		From:     from,
+		To:       email,
+		Password: newPassword,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create email template: %v", err)
+	}
+
+	// Authentication
+	auth := smtp.PlainAuth("", from, password, host)
+
+	// Send email
+	err = smtp.SendMail(host+":"+port, auth, from, []string{email}, body.Bytes())
+	if err != nil {
+		return fmt.Errorf("failed to send email: %v", err)
+	}
+
+	return nil
+}
+
+func generateVerificationCode() string {
+	return fmt.Sprintf("%06d", rand.Intn(1000000))
+}
+
+func generateRandomPassword() string {
+	passwordLength := 12
+	charset := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()"
+	password := make([]byte, passwordLength)
+	for i := range password {
+		password[i] = charset[rand.Intn(len(charset))]
+	}
+	return string(password)
+}
+
+func sendVerificationEmail(email, code string) error {
+	// Email configuration
+	from := os.Getenv("EMAIL_FROM")
+	password := os.Getenv("EMAIL_PASSWORD")
+	host := os.Getenv("EMAIL_HOST")
+	port := os.Getenv("EMAIL_PORT")
+
+	// Validate email configuration
+	if from == "" || password == "" || host == "" || port == "" {
+		return errors.New("incomplete email configuration")
+	}
+
+	// Prepare email body
+	var body bytes.Buffer
+	templ := template.Must(template.New("verificationCode").Parse(`From: {{.From}}
+To: {{.To}}
+Subject: Asset Dairy Verification Code
+Content-Type: text/plain; charset=UTF-8
+
+Your verification code is:
+
+{{.Code}}
+
+This code will expire in 3 minutes.
+
+Best regards,
+Asset Dairy Team`))
+
+	err := templ.Execute(&body, struct {
+		From string
+		To   string
+		Code string
+	}{
+		From: from,
+		To:   email,
+		Code: code,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create email template: %v", err)
+	}
+
+	// Authentication
+	auth := smtp.PlainAuth("", from, password, host)
+
+	// Send email
+	err = smtp.SendMail(host+":"+port, auth, from, []string{email}, body.Bytes())
+	if err != nil {
+		return fmt.Errorf("failed to send email: %v", err)
+	}
+
+	return nil
 }
