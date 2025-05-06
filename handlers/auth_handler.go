@@ -25,13 +25,19 @@ func (h *AuthHandler) SignUp(c *gin.Context) {
 		return
 	}
 
-	user, err := h.authService.SignUp(&req)
+	response, err := h.authService.SignUp(&req)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusCreated, user)
+	// Set refresh token as HttpOnly cookie
+	c.SetCookie("refresh_token", response.RefreshToken, 7*24*3600, "/", "", false, true)
+
+	c.JSON(http.StatusCreated, gin.H{
+		"token": response.Token,
+		"user":  response.User,
+	})
 }
 
 func (h *AuthHandler) SignIn(c *gin.Context) {
