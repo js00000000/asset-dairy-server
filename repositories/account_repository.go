@@ -24,8 +24,8 @@ func NewAccountRepository(db *gorm.DB) *AccountRepository {
 }
 
 func (r *AccountRepository) ListAccounts(userID string) ([]models.Account, error) {
-	var gormAccounts []models.GormAccount
-	result := r.DB.Where(&models.GormAccount{UserID: userID}).Find(&gormAccounts)
+	var gormAccounts []models.Account
+	result := r.DB.Where(&models.Account{UserID: userID}).Find(&gormAccounts)
 	if result.Error != nil {
 		log.Println("Failed to fetch accounts:", result.Error)
 		return nil, result.Error
@@ -44,7 +44,7 @@ func (r *AccountRepository) ListAccounts(userID string) ([]models.Account, error
 }
 
 func (r *AccountRepository) CreateAccount(userID string, acc *models.Account) error {
-	gormAcc := models.GormAccount{
+	gormAcc := models.Account{
 		ID:       acc.ID,
 		UserID:   userID,
 		Name:     acc.Name,
@@ -61,8 +61,8 @@ func (r *AccountRepository) CreateAccount(userID string, acc *models.Account) er
 }
 
 func (r *AccountRepository) UpdateAccount(userID, accID string, req models.AccountUpdateRequest) (*models.Account, error) {
-	var gormAccount models.GormAccount
-	result := r.DB.Where(&models.GormAccount{ID: accID, UserID: userID}).First(&gormAccount)
+	var gormAccount models.Account
+	result := r.DB.Where(&models.Account{ID: accID, UserID: userID}).First(&gormAccount)
 	if result.Error != nil {
 		log.Println("Failed to find account:", result.Error)
 		return nil, result.Error
@@ -88,7 +88,7 @@ func (r *AccountRepository) UpdateAccount(userID, accID string, req models.Accou
 }
 
 func (r *AccountRepository) DeleteAccount(userID, accID string) error {
-	result := r.DB.Where(&models.GormAccount{ID: accID, UserID: userID}).Delete(&models.GormAccount{})
+	result := r.DB.Where(&models.Account{ID: accID, UserID: userID}).Delete(&models.Account{})
 	if result.Error != nil {
 		log.Println("Failed to delete account:", result.Error)
 		return result.Error

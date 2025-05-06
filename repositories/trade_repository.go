@@ -31,8 +31,8 @@ func NewTradeRepository(db *gorm.DB) *TradeRepository {
 
 // ListTrades retrieves all trades for a given user
 func (r *TradeRepository) ListTrades(userID string) ([]models.Trade, error) {
-	var gormTrades []models.GormTrade
-	result := r.db.Where(&models.GormTrade{UserID: userID}).Find(&gormTrades)
+	var gormTrades []models.Trade
+	result := r.db.Where(&models.Trade{UserID: userID}).Find(&gormTrades)
 	if result.Error != nil {
 		log.Println("TradeRepository: Failed to fetch trades:", result.Error)
 		return nil, result.Error
@@ -60,18 +60,18 @@ func (r *TradeRepository) ListTrades(userID string) ([]models.Trade, error) {
 
 func (r *TradeRepository) IsAccountOwnedByUser(accountID, userID string) (bool, error) {
 	var count int64
-	result := r.db.Model(&models.GormAccount{}).Where(&models.GormAccount{ID: accountID, UserID: userID}).Count(&count)
+	result := r.db.Model(&models.Account{}).Where(&models.Account{ID: accountID, UserID: userID}).Count(&count)
 	return count > 0, result.Error
 }
 
 func (r *TradeRepository) IsTradeOwnedByUser(tradeID, userID string) (bool, error) {
 	var count int64
-	result := r.db.Model(&models.GormTrade{}).Joins("JOIN accounts a ON trades.account_id = a.id").Where("trades.id = ? AND a.user_id = ?", tradeID, userID).Count(&count)
+	result := r.db.Model(&models.Trade{}).Joins("JOIN accounts a ON trades.account_id = a.id").Where("trades.id = ? AND a.user_id = ?", tradeID, userID).Count(&count)
 	return count > 0, result.Error
 }
 
 func (r *TradeRepository) CreateTrade(userID string, trade models.Trade) error {
-	gormTrade := &models.GormTrade{
+	gormTrade := &models.Trade{
 		ID:        trade.ID,
 		UserID:    userID,
 		Type:      trade.Type,
@@ -90,8 +90,8 @@ func (r *TradeRepository) CreateTrade(userID string, trade models.Trade) error {
 }
 
 func (r *TradeRepository) UpdateTrade(userID, tradeID string, req models.TradeUpdateRequest) (*models.Trade, error) {
-	var gormTrade models.GormTrade
-	result := r.db.Where(&models.GormTrade{ID: tradeID, UserID: userID}).First(&gormTrade)
+	var gormTrade models.Trade
+	result := r.db.Where(&models.Trade{ID: tradeID, UserID: userID}).First(&gormTrade)
 	if result.Error != nil {
 		log.Println("Failed to find trade:", result.Error)
 		return nil, result.Error
@@ -148,7 +148,7 @@ func (r *TradeRepository) UpdateTrade(userID, tradeID string, req models.TradeUp
 }
 
 func (r *TradeRepository) DeleteTrade(userID, tradeID string) (bool, error) {
-	result := r.db.Where("id = ? AND user_id = ?", tradeID, userID).Delete(&models.GormTrade{})
+	result := r.db.Where("id = ? AND user_id = ?", tradeID, userID).Delete(&models.Trade{})
 	if result.Error != nil {
 		log.Println("Failed to delete trade:", result.Error)
 		return false, result.Error

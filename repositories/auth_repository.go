@@ -23,7 +23,7 @@ func NewAuthRepository(db *gorm.DB) *AuthRepository {
 }
 
 func (r *AuthRepository) CreateUser(user *models.User, passwordHash string) error {
-	gormUser := &models.GormUser{
+	gormUser := &models.User{
 		ID:            user.ID,
 		Email:         user.Email,
 		Name:          user.Name,
@@ -40,8 +40,8 @@ func (r *AuthRepository) CreateUser(user *models.User, passwordHash string) erro
 }
 
 func (r *AuthRepository) FindUserByEmail(email string) (*models.User, string, error) {
-	var gormUser models.GormUser
-	result := r.DB.Where(&models.GormUser{Email: email}).First(&gormUser)
+	var gormUser models.User
+	result := r.DB.Where(&models.User{Email: email}).First(&gormUser)
 	if result.Error != nil {
 		log.Println("Failed to find user:", result.Error)
 		return nil, "", result.Error

@@ -19,7 +19,7 @@ func NewAuthHandler(authService services.AuthServiceInterface) *AuthHandler {
 }
 
 func (h *AuthHandler) SignUp(c *gin.Context) {
-	var req models.SignUpRequest
+	var req models.UserSignUpRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -35,7 +35,7 @@ func (h *AuthHandler) SignUp(c *gin.Context) {
 }
 
 func (h *AuthHandler) SignIn(c *gin.Context) {
-	var req models.SignInRequest
+	var req models.UserSignInRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

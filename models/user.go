@@ -3,22 +3,26 @@ package models
 import "time"
 
 type User struct {
-	ID        string    `db:"id" json:"id"`
-	Email     string    `db:"email" json:"email"`
-	Name      string    `db:"name" json:"name"`
-	Username  string    `db:"username" json:"username"`
-	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	ID            string    `gorm:"primaryKey;type:uuid" db:"id" json:"id"`
+	Name          string    `gorm:"not null" db:"name" json:"name"`
+	Email         string    `gorm:"unique;not null" db:"email" json:"email"`
+	Username      string    `gorm:"unique;not null" db:"username" json:"username"`
+	Password_Hash string    `gorm:"not null" db:"password_hash" json:"-"`
+	CreatedAt     time.Time `db:"created_at" json:"created_at"`
 }
 
-type SignUpRequest struct {
+func (User) TableName() string {
+	return "users"
+}
+
+type UserSignUpRequest struct {
 	Email    string `json:"email" binding:"required,email"`
 	Name     string `json:"name" binding:"required"`
 	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required,min=6"`
 }
 
-// SignInRequest represents the payload for sign-in
-type SignInRequest struct {
+type UserSignInRequest struct {
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required"`
 }

@@ -30,16 +30,16 @@ func NewProfileRepository(db *gorm.DB) *ProfileRepository {
 
 // GetProfile retrieves user profile and investment profile from the database
 func (r *ProfileRepository) GetProfile(userID string) (*models.ProfileResponse, error) {
-	var gormUser models.GormUser
-	result := r.db.Where(&models.GormUser{ID: userID}).First(&gormUser)
+	var gormUser models.User
+	result := r.db.Where(&models.User{ID: userID}).First(&gormUser)
 	if result.Error != nil {
 		log.Println("Failed to fetch user:", result.Error)
 		return nil, result.Error
 	}
 
 	// Fetch investment profile
-	var gormInvestmentProfile models.GormInvestmentProfile
-	result = r.db.Where(&models.GormInvestmentProfile{UserID: userID}).First(&gormInvestmentProfile)
+	var gormInvestmentProfile models.InvestmentProfile
+	result = r.db.Where(&models.InvestmentProfile{UserID: userID}).First(&gormInvestmentProfile)
 	if result.Error == gorm.ErrRecordNotFound {
 		return &models.ProfileResponse{
 			ID:       gormUser.ID,
@@ -58,8 +58,8 @@ func (r *ProfileRepository) GetProfile(userID string) (*models.ProfileResponse, 
 		Name:     gormUser.Name,
 		Username: gormUser.Username,
 		InvestmentProfile: &models.InvestmentProfile{
-			Id:                                   gormInvestmentProfile.ID,
-			UserId:                               gormInvestmentProfile.UserID,
+			ID:                                   gormInvestmentProfile.ID,
+			UserID:                               gormInvestmentProfile.UserID,
 			Age:                                  int(gormInvestmentProfile.Age),
 			MaxAcceptableShortTermLossPercentage: int(gormInvestmentProfile.MaxAcceptableShortTermLossPercentage),
 			ExpectedAnnualizedRateOfReturn:       int(gormInvestmentProfile.ExpectedAnnualizedRateOfReturn),
@@ -73,8 +73,8 @@ func (r *ProfileRepository) GetProfile(userID string) (*models.ProfileResponse, 
 
 // ChangePassword updates the user's password after verifying the current password
 func (r *ProfileRepository) ChangePassword(userID string, currentPassword, newPassword string) error {
-	var gormUser models.GormUser
-	result := r.db.Where(&models.GormUser{ID: userID}).First(&gormUser)
+	var gormUser models.User
+	result := r.db.Where(&models.User{ID: userID}).First(&gormUser)
 	if result.Error != nil {
 		log.Println("Failed to find user:", result.Error)
 		return result.Error
@@ -105,8 +105,8 @@ func (r *ProfileRepository) ChangePassword(userID string, currentPassword, newPa
 
 func (r *ProfileRepository) UpdateProfile(userID string, req *models.UserUpdateRequest) (*models.User, error) {
 	// Find and update user
-	var gormUser models.GormUser
-	result := r.db.Where(&models.GormUser{ID: userID}).First(&gormUser)
+	var gormUser models.User
+	result := r.db.Where(&models.User{ID: userID}).First(&gormUser)
 	if result.Error != nil {
 		log.Println("Failed to find user:", result.Error)
 		return nil, result.Error
@@ -125,12 +125,12 @@ func (r *ProfileRepository) UpdateProfile(userID string, req *models.UserUpdateR
 	// Upsert investment profile
 	if req.InvestmentProfile != nil {
 		// Check if investment profile already exists
-		var existingProfile models.GormInvestmentProfile
-		result = r.db.Where(&models.GormInvestmentProfile{UserID: userID}).First(&existingProfile)
+		var existingProfile models.InvestmentProfile
+		result = r.db.Where(&models.InvestmentProfile{UserID: userID}).First(&existingProfile)
 
 		if result.Error == gorm.ErrRecordNotFound {
 			// Create new investment profile
-			newProfile := models.GormInvestmentProfile{
+			newProfile := models.InvestmentProfile{
 				ID:                                   uuid.New().String(),
 				UserID:                               userID,
 				Age:                                  int(req.InvestmentProfile.Age),

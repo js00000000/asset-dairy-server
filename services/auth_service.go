@@ -17,7 +17,7 @@ var (
 )
 
 type AuthServiceInterface interface {
-	SignUp(req *models.SignUpRequest) (*models.User, error)
+	SignUp(req *models.UserSignUpRequest) (*models.User, error)
 	SignIn(email, password string) (*models.AuthResponse, error)
 	RefreshToken(refreshToken string) (string, string, error)
 }
@@ -30,7 +30,7 @@ func NewAuthService(repo repositories.AuthRepositoryInterface) *AuthService {
 	return &AuthService{repo: repo}
 }
 
-func (s *AuthService) SignUp(req *models.SignUpRequest) (*models.User, error) {
+func (s *AuthService) SignUp(req *models.UserSignUpRequest) (*models.User, error) {
 	hashed, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, errors.New("failed to hash password")
