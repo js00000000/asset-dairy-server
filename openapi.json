@@ -220,6 +220,26 @@
             "description": "Unauthorized"
           }
         }
+      },
+      "delete": {
+        "summary": "Delete current user profile",
+        "description": "Permanently deletes the authenticated user's profile and all associated data, including investment profile, accounts, and trades.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Profile deleted successfully. No content returned."
+          },
+          "401": {
+            "description": "Unauthorized - User not authenticated or token invalid."
+          },
+          "500": {
+            "description": "Internal Server Error - Something went wrong during profile deletion."
+          }
+        }
       }
     },
     "/accounts": {

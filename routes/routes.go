@@ -36,6 +36,7 @@ func SetupRoutes(r *gin.Engine,
 			profile.POST("/change-password", profileHandler.ChangePassword)
 			profile.GET("", profileHandler.GetProfile)
 			profile.PUT("", profileHandler.UpdateProfile)
+			profile.DELETE("", profileHandler.DeleteProfile)
 		}
 
 		accounts := protected.Group("/accounts")

@@ -17,6 +17,7 @@ type UserRepositoryInterface interface {
 	UpdateUser(userID string, req *models.UserUpdateRequest) error
 	FindInvestmentProfileByUserID(userID string) (*models.InvestmentProfile, error)
 	UpsertInvestmentProfile(userID string, profile *models.InvestmentProfile) error
+	DeleteUser(userID string) error
 }
 
 // UserRepository 實作了 UserRepositoryInterface
@@ -139,5 +140,12 @@ func (r *UserRepository) UpsertInvestmentProfile(userID string, profile *models.
 
 	// Use FirstOrCreate to either find an existing record or create a new one
 	result := r.db.Where(&models.GormInvestmentProfile{UserID: userID}).Assign(gormProfile).FirstOrCreate(gormProfile)
+	return result.Error
+}
+
+// DeleteUser 刪除使用者及其相關資料
+func (r *UserRepository) DeleteUser(userID string) error {
+	// Delete user - cascade will handle related records
+	result := r.db.Where(&models.GormUser{ID: userID}).Delete(&models.GormUser{})
 	return result.Error
 }

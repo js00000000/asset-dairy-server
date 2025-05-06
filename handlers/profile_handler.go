@@ -11,12 +11,14 @@ import (
 // ProfileHandler handles profile-related HTTP requests
 type ProfileHandler struct {
 	profileService services.ProfileServiceInterface
+	userService services.UserServiceInterface
 }
 
 // NewProfileHandler creates a new ProfileHandler instance
-func NewProfileHandler(profileService services.ProfileServiceInterface) *ProfileHandler {
+func NewProfileHandler(profileService services.ProfileServiceInterface, userService services.UserServiceInterface) *ProfileHandler {
 	return &ProfileHandler{
 		profileService: profileService,
+		userService: userService,
 	}
 }
 
@@ -81,4 +83,21 @@ func (h *ProfileHandler) UpdateProfile(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, user)
+}
+
+// DeleteProfile deletes the current user's profile and all associated data
+func (h *ProfileHandler) DeleteProfile(c *gin.Context) {
+	userID, ok := c.Get("user_id")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	err := h.userService.DeleteUser(userID.(string))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
 }

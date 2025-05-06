@@ -93,6 +93,7 @@ func main() {
 	tradeRepo := repositories.NewTradeRepository(dbConn)
 	accountRepo := repositories.NewAccountRepository(dbConn)
 	authRepo := repositories.NewAuthRepository(dbConn)
+	userRepo := repositories.NewUserRepository(dbConn)
 
 	// Initialize services
 	authService := services.NewAuthService(authRepo)
@@ -100,10 +101,11 @@ func main() {
 	accountService := services.NewAccountService(accountRepo)
 	tradeService := services.NewTradeService(tradeRepo)
 	holdingService := services.NewHoldingService(tradeService)
+	userService := services.NewUserService(userRepo)
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(authService)
-	profileHandler := handlers.NewProfileHandler(profileService)
+	profileHandler := handlers.NewProfileHandler(profileService, userService)
 	accountHandler := handlers.NewAccountHandler(accountService)
 	tradeHandler := handlers.NewTradeHandler(tradeService)
 	holdingHandler := handlers.NewHoldingHandler(holdingService)

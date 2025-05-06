@@ -33,3 +33,5 @@ func (s *ProfileService) ChangePassword(userID string, currentPassword, newPassw
 func (s *ProfileService) UpdateProfile(userID string, req *models.UserUpdateRequest) (*models.User, error) {
 	return s.repo.UpdateProfile(userID, req)
 }
+
+
