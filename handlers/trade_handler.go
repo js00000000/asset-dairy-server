@@ -35,7 +35,23 @@ func (h *TradeHandler) ListTrades(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, trades)
+	var tradeResponses []models.TradeResponse
+	for _, trade := range trades {
+		tradeResponses = append(tradeResponses, models.TradeResponse{
+			ID:        trade.ID,
+			Type:      trade.Type,
+			AssetType: trade.AssetType,
+			Ticker:    trade.Ticker,
+			TradeDate: trade.TradeDate,
+			Quantity:  trade.Quantity,
+			Price:     trade.Price,
+			Currency:  trade.Currency,
+			AccountID: trade.AccountID,
+			Reason:    trade.Reason,
+		})
+	}
+
+	c.JSON(http.StatusOK, tradeResponses)
 }
 
 // Create a trade
@@ -77,7 +93,19 @@ func (h *TradeHandler) CreateTrade(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create trade"})
 		return
 	}
-	c.JSON(http.StatusCreated, trade)
+	tradeResponse := models.TradeResponse{
+		ID:        trade.ID,
+		Type:      trade.Type,
+		AssetType: trade.AssetType,
+		Ticker:    trade.Ticker,
+		TradeDate: trade.TradeDate,
+		Quantity:  trade.Quantity,
+		Price:     trade.Price,
+		Currency:  trade.Currency,
+		AccountID: trade.AccountID,
+		Reason:    trade.Reason,
+	}
+	c.JSON(http.StatusCreated, tradeResponse)
 }
 
 // Update a trade
@@ -115,7 +143,19 @@ func (h *TradeHandler) UpdateTrade(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "No fields to update"})
 		return
 	}
-	c.JSON(http.StatusOK, updatedTrade)
+	tradeResponse := models.TradeResponse{
+		ID:        updatedTrade.ID,
+		Type:      updatedTrade.Type,
+		AssetType: updatedTrade.AssetType,
+		Ticker:    updatedTrade.Ticker,
+		TradeDate: updatedTrade.TradeDate,
+		Quantity:  updatedTrade.Quantity,
+		Price:     updatedTrade.Price,
+		Currency:  updatedTrade.Currency,
+		AccountID: updatedTrade.AccountID,
+		Reason:    updatedTrade.Reason,
+	}
+	c.JSON(http.StatusOK, tradeResponse)
 }
 
 // Delete a trade

@@ -48,3 +48,16 @@ type TradeUpdateRequest struct {
 	AccountID string  `json:"accountId" binding:"omitempty"`
 	Reason    *string `json:"reason"`
 }
+
+type TradeResponse struct {
+	ID        string    `json:"id" db:"id"`
+	Type      string    `json:"type" db:"type"`            // buy or sell
+	AssetType string    `json:"assetType" db:"asset_type"` // stock or crypto
+	Ticker    string    `json:"ticker" db:"ticker"`
+	TradeDate time.Time `json:"tradeDate" db:"trade_date"`
+	Quantity  float64   `json:"quantity" db:"quantity"`
+	Price     float64   `json:"price" db:"price"`
+	Currency  string    `json:"currency" db:"currency"` // e.g., USD, TWD
+	AccountID string    `json:"accountId" db:"account_id"`
+	Reason    *string   `json:"reason,omitempty" db:"reason"`
+}
