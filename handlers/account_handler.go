@@ -29,7 +29,16 @@ func (h *AccountHandler) ListAccounts(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch accounts"})
 		return
 	}
-	c.JSON(http.StatusOK, accounts)
+	responses := make([]models.AccountResponse, len(accounts))
+	for i, acc := range accounts {
+		responses[i] = models.AccountResponse{
+			ID:       acc.ID,
+			Name:     acc.Name,
+			Currency: acc.Currency,
+			Balance:  acc.Balance,
+		}
+	}
+	c.JSON(http.StatusOK, responses)
 }
 
 // CreateAccount creates a new account for the current user
@@ -49,7 +58,13 @@ func (h *AccountHandler) CreateAccount(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create account"})
 		return
 	}
-	c.JSON(http.StatusCreated, acc)
+	response := models.AccountResponse{
+		ID:       acc.ID,
+		Name:     acc.Name,
+		Currency: acc.Currency,
+		Balance:  acc.Balance,
+	}
+	c.JSON(http.StatusCreated, response)
 }
 
 // UpdateAccount updates an account by id for the current user
@@ -70,7 +85,13 @@ func (h *AccountHandler) UpdateAccount(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update account"})
 		return
 	}
-	c.JSON(http.StatusOK, acc)
+	response := models.AccountResponse{
+		ID:       acc.ID,
+		Name:     acc.Name,
+		Currency: acc.Currency,
+		Balance:  acc.Balance,
+	}
+	c.JSON(http.StatusOK, response)
 }
 
 // DeleteAccount deletes an account by id for the current user

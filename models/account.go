@@ -24,3 +24,10 @@ type AccountUpdateRequest struct {
 	Currency string  `json:"currency"`
 	Balance  float64 `json:"balance"`
 }
+
+type AccountResponse struct {
+	ID       string  `json:"id"`
+	Name     string  `json:"name"`
+	Currency string  `json:"currency"`
+	Balance  float64 `json:"balance"`
+}
