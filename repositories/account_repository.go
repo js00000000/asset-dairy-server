@@ -1,10 +1,11 @@
 package repositories
 
 import (
-	"database/sql"
 	"log"
 
 	"asset-dairy/models"
+
+	"gorm.io/gorm"
 )
 
 type AccountRepositoryInterface interface {
@@ -15,72 +16,82 @@ type AccountRepositoryInterface interface {
 }
 
 type AccountRepository struct {
-	DB *sql.DB
+	DB *gorm.DB
 }
 
-func NewAccountRepository(db *sql.DB) *AccountRepository {
+func NewAccountRepository(db *gorm.DB) *AccountRepository {
 	return &AccountRepository{DB: db}
 }
 
 func (r *AccountRepository) ListAccounts(userID string) ([]models.Account, error) {
-	rows, err := r.DB.Query("SELECT id, name, currency, balance FROM accounts WHERE user_id = $1", userID)
-	if err != nil {
-		log.Println("Failed to fetch accounts:", err)
-		return nil, err
+	var gormAccounts []models.GormAccount
+	result := r.DB.Where(&models.GormAccount{UserID: userID}).Find(&gormAccounts)
+	if result.Error != nil {
+		log.Println("Failed to fetch accounts:", result.Error)
+		return nil, result.Error
 	}
-	defer rows.Close()
 
-	accounts := []models.Account{}
-	for rows.Next() {
-		var acc models.Account
-		if err := rows.Scan(&acc.ID, &acc.Name, &acc.Currency, &acc.Balance); err != nil {
-			return nil, err
+	accounts := make([]models.Account, len(gormAccounts))
+	for i, gormAcc := range gormAccounts {
+		accounts[i] = models.Account{
+			ID:       gormAcc.ID,
+			Name:     gormAcc.Name,
+			Currency: gormAcc.Currency,
+			Balance:  gormAcc.Balance,
 		}
-		accounts = append(accounts, acc)
 	}
 	return accounts, nil
 }
 
 func (r *AccountRepository) CreateAccount(userID string, acc *models.Account) error {
-	err := r.DB.QueryRow(
-		"INSERT INTO accounts (id, user_id, name, currency, balance) VALUES ($1, $2, $3, $4, $5) RETURNING id",
-		acc.ID, userID, acc.Name, acc.Currency, acc.Balance,
-	).Scan(&acc.ID)
-	if err != nil {
-		log.Println("Failed to create account:", err)
-		return err
+	gormAcc := models.GormAccount{
+		ID:       acc.ID,
+		UserID:   userID,
+		Name:     acc.Name,
+		Currency: acc.Currency,
+		Balance:  acc.Balance,
+	}
+
+	result := r.DB.Create(&gormAcc)
+	if result.Error != nil {
+		log.Println("Failed to create account:", result.Error)
+		return result.Error
 	}
 	return nil
 }
 
 func (r *AccountRepository) UpdateAccount(userID, accID string, req models.AccountUpdateRequest) (*models.Account, error) {
-	_, err := r.DB.Exec(
-		"UPDATE accounts SET name = $1, currency = $2, balance = $3 WHERE id = $4 AND user_id = $5",
-		req.Name, req.Currency, req.Balance, accID, userID,
-	)
-	if err != nil {
-		log.Println("Failed to update account:", err)
-		return nil, err
+	var gormAccount models.GormAccount
+	result := r.DB.Where(&models.GormAccount{ID: accID, UserID: userID}).First(&gormAccount)
+	if result.Error != nil {
+		log.Println("Failed to find account:", result.Error)
+		return nil, result.Error
 	}
 
-	var acc models.Account
-	err = r.DB.QueryRow(
-		"SELECT id, name, currency, balance FROM accounts WHERE id = $1 AND user_id = $2",
-		accID, userID,
-	).Scan(&acc.ID, &acc.Name, &acc.Currency, &acc.Balance)
-	if err != nil {
-		log.Println("Failed to fetch updated account:", err)
-		return nil, err
+	// Update fields from request
+	gormAccount.Name = req.Name
+	gormAccount.Currency = req.Currency
+	gormAccount.Balance = req.Balance
+
+	result = r.DB.Save(&gormAccount)
+	if result.Error != nil {
+		log.Println("Failed to update account:", result.Error)
+		return nil, result.Error
 	}
 
-	return &acc, nil
+	return &models.Account{
+		ID:       gormAccount.ID,
+		Name:     gormAccount.Name,
+		Currency: gormAccount.Currency,
+		Balance:  gormAccount.Balance,
+	}, nil
 }
 
 func (r *AccountRepository) DeleteAccount(userID, accID string) error {
-	_, err := r.DB.Exec("DELETE FROM accounts WHERE id = $1 AND user_id = $2", accID, userID)
-	if err != nil {
-		log.Println("Failed to delete account:", err)
-		return err
+	result := r.DB.Where(&models.GormAccount{ID: accID, UserID: userID}).Delete(&models.GormAccount{})
+	if result.Error != nil {
+		log.Println("Failed to delete account:", result.Error)
+		return result.Error
 	}
 	return nil
 }

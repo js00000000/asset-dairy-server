@@ -1,10 +1,12 @@
 package repositories
 
 import (
-	"database/sql"
 	"log"
+	"time"
 
 	"asset-dairy/models"
+
+	"gorm.io/gorm"
 )
 
 type AuthRepositoryInterface interface {
@@ -13,35 +15,45 @@ type AuthRepositoryInterface interface {
 }
 
 type AuthRepository struct {
-	DB *sql.DB
+	DB *gorm.DB
 }
 
-func NewAuthRepository(db *sql.DB) *AuthRepository {
+func NewAuthRepository(db *gorm.DB) *AuthRepository {
 	return &AuthRepository{DB: db}
 }
 
 func (r *AuthRepository) CreateUser(user *models.User, passwordHash string) error {
-	err := r.DB.QueryRow(
-		`INSERT INTO users (id, email, name, username, password_hash, created_at) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-		user.ID, user.Email, user.Name, user.Username, passwordHash, user.CreatedAt,
-	).Scan(&user.ID)
-	if err != nil {
-		log.Println("Failed to insert user:", err)
-		return err
+	gormUser := &models.GormUser{
+		ID:            user.ID,
+		Email:         user.Email,
+		Name:          user.Name,
+		Username:      user.Username,
+		Password_Hash: passwordHash,
+	}
+
+	result := r.DB.Create(gormUser)
+	if result.Error != nil {
+		log.Println("Failed to insert user:", result.Error)
+		return result.Error
 	}
 	return nil
 }
 
 func (r *AuthRepository) FindUserByEmail(email string) (*models.User, string, error) {
-	var user models.User
-	var passwordHash string
-	err := r.DB.QueryRow(
-		`SELECT id, email, name, username, password_hash, created_at FROM users WHERE email = $1`,
-		email,
-	).Scan(&user.ID, &user.Email, &user.Name, &user.Username, &passwordHash, &user.CreatedAt)
-	if err != nil {
-		log.Println("Failed to find user:", err)
-		return nil, "", err
+	var gormUser models.GormUser
+	result := r.DB.Where(&models.GormUser{Email: email}).First(&gormUser)
+	if result.Error != nil {
+		log.Println("Failed to find user:", result.Error)
+		return nil, "", result.Error
 	}
-	return &user, passwordHash, nil
+
+	user := &models.User{
+		ID:        gormUser.ID,
+		Email:     gormUser.Email,
+		Name:      gormUser.Name,
+		Username:  gormUser.Username,
+		CreatedAt: time.Now(), // Use current time as a fallback
+	}
+
+	return user, gormUser.Password_Hash, nil
 }

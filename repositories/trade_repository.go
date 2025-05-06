@@ -1,12 +1,12 @@
 package repositories
 
 import (
-	"asset-dairy/models"
-	"database/sql"
 	"log"
-	"strconv"
-	"strings"
 	"time"
+
+	"asset-dairy/models"
+
+	"gorm.io/gorm"
 )
 
 // TradeRepositoryInterface defines methods for trade-related database operations
@@ -21,146 +21,138 @@ type TradeRepositoryInterface interface {
 
 // TradeRepository implements TradeRepositoryInterface
 type TradeRepository struct {
-	db *sql.DB
+	db *gorm.DB
 }
 
 // NewTradeRepository creates a new TradeRepository instance
-func NewTradeRepository(db *sql.DB) *TradeRepository {
+func NewTradeRepository(db *gorm.DB) *TradeRepository {
 	return &TradeRepository{db: db}
 }
 
 // ListTrades retrieves all trades for a given user
 func (r *TradeRepository) ListTrades(userID string) ([]models.Trade, error) {
-	rows, err := r.db.Query("SELECT id, type, asset_type, ticker, trade_date, quantity, price, currency, account_id, reason FROM trades WHERE user_id = $1", userID)
-	if err != nil {
-		log.Println("TradeRepository: Failed to fetch trades:", err)
-		return nil, err
+	var gormTrades []models.GormTrade
+	result := r.db.Where(&models.GormTrade{UserID: userID}).Find(&gormTrades)
+	if result.Error != nil {
+		log.Println("TradeRepository: Failed to fetch trades:", result.Error)
+		return nil, result.Error
 	}
-	defer rows.Close()
 
 	trades := []models.Trade{}
-	for rows.Next() {
-		var t models.Trade
-		var reason sql.NullString
-		if err := rows.Scan(&t.ID, &t.Type, &t.AssetType, &t.Ticker, &t.TradeDate, &t.Quantity, &t.Price, &t.Currency, &t.AccountID, &reason); err != nil {
-			return nil, err
+	for _, gormTrade := range gormTrades {
+		trade := models.Trade{
+			ID:        gormTrade.ID,
+			Type:      gormTrade.Type,
+			AssetType: gormTrade.AssetType,
+			Ticker:    gormTrade.Ticker,
+			TradeDate: gormTrade.TradeDate,
+			Quantity:  gormTrade.Quantity,
+			Price:     gormTrade.Price,
+			Currency:  gormTrade.Currency,
+			AccountID: gormTrade.AccountID,
+			Reason:    gormTrade.Reason,
 		}
-		if reason.Valid {
-			t.Reason = &reason.String
-		}
-		trades = append(trades, t)
-	}
-
-	if err = rows.Err(); err != nil {
-		return nil, err
+		trades = append(trades, trade)
 	}
 
 	return trades, nil
 }
 
 func (r *TradeRepository) IsAccountOwnedByUser(accountID, userID string) (bool, error) {
-	var count int
-	err := r.db.QueryRow(`SELECT COUNT(*) FROM accounts WHERE id = $1 AND user_id = $2`, accountID, userID).Scan(&count)
-	return count > 0, err
+	var count int64
+	result := r.db.Model(&models.GormAccount{}).Where(&models.GormAccount{ID: accountID, UserID: userID}).Count(&count)
+	return count > 0, result.Error
 }
 
 func (r *TradeRepository) IsTradeOwnedByUser(tradeID, userID string) (bool, error) {
-	var count int
-	err := r.db.QueryRow(`SELECT COUNT(*) FROM trades t JOIN accounts a ON t.account_id = a.id WHERE t.id = $1 AND a.user_id = $2`, tradeID, userID).Scan(&count)
-	return count > 0, err
+	var count int64
+	result := r.db.Model(&models.GormTrade{}).Joins("JOIN accounts a ON trades.account_id = a.id").Where("trades.id = ? AND a.user_id = ?", tradeID, userID).Count(&count)
+	return count > 0, result.Error
 }
 
 func (r *TradeRepository) CreateTrade(userID string, trade models.Trade) error {
-	_, err := r.db.Exec(`INSERT INTO trades (id, user_id, type, asset_type, ticker, trade_date, quantity, price, currency, account_id, reason) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-		trade.ID, userID, trade.Type, trade.AssetType, trade.Ticker, trade.TradeDate, trade.Quantity, trade.Price, trade.Currency, trade.AccountID, trade.Reason,
-	)
-	return err
+	gormTrade := &models.GormTrade{
+		ID:        trade.ID,
+		UserID:    userID,
+		Type:      trade.Type,
+		AssetType: trade.AssetType,
+		Ticker:    trade.Ticker,
+		TradeDate: trade.TradeDate,
+		Quantity:  trade.Quantity,
+		Price:     trade.Price,
+		Currency:  trade.Currency,
+		AccountID: trade.AccountID,
+		Reason:    trade.Reason,
+	}
+
+	result := r.db.Create(gormTrade)
+	return result.Error
 }
 
 func (r *TradeRepository) UpdateTrade(userID, tradeID string, req models.TradeUpdateRequest) (*models.Trade, error) {
-	// Build update query dynamically based on non-zero fields
-	setClauses := []string{}
-	args := []interface{}{}
-	argIdx := 1
+	var gormTrade models.GormTrade
+	result := r.db.Where(&models.GormTrade{ID: tradeID, UserID: userID}).First(&gormTrade)
+	if result.Error != nil {
+		log.Println("Failed to find trade:", result.Error)
+		return nil, result.Error
+	}
+
+	// Update fields if provided
 	if req.Type != "" {
-		setClauses = append(setClauses, "type = $"+strconv.Itoa(argIdx))
-		args = append(args, req.Type)
-		argIdx++
+		gormTrade.Type = req.Type
 	}
 	if req.AssetType != "" {
-		setClauses = append(setClauses, "asset_type = $"+strconv.Itoa(argIdx))
-		args = append(args, req.AssetType)
-		argIdx++
-	}
-	if req.Ticker != "" {
-		setClauses = append(setClauses, "ticker = $"+strconv.Itoa(argIdx))
-		args = append(args, req.Ticker)
-		argIdx++
+		gormTrade.AssetType = req.AssetType
 	}
 	if req.TradeDate != "" {
 		tradeDate, err := time.Parse("2006-01-02", req.TradeDate)
 		if err != nil {
 			return nil, err
 		}
-		setClauses = append(setClauses, "trade_date = $"+strconv.Itoa(argIdx))
-		args = append(args, tradeDate)
-		argIdx++
+		gormTrade.TradeDate = tradeDate
+	}
+	if req.Ticker != "" {
+		gormTrade.Ticker = req.Ticker
 	}
 	if req.Quantity != 0 {
-		setClauses = append(setClauses, "quantity = $"+strconv.Itoa(argIdx))
-		args = append(args, req.Quantity)
-		argIdx++
+		gormTrade.Quantity = req.Quantity
 	}
 	if req.Price != 0 {
-		setClauses = append(setClauses, "price = $"+strconv.Itoa(argIdx))
-		args = append(args, req.Price)
-		argIdx++
+		gormTrade.Price = req.Price
 	}
 	if req.Currency != "" {
-		setClauses = append(setClauses, "currency = $"+strconv.Itoa(argIdx))
-		args = append(args, req.Currency)
-		argIdx++
-	}
-	if req.AccountID != "" {
-		setClauses = append(setClauses, "account_id = $"+strconv.Itoa(argIdx))
-		args = append(args, req.AccountID)
-		argIdx++
+		gormTrade.Currency = req.Currency
 	}
 	if req.Reason != nil {
-		setClauses = append(setClauses, "reason = $"+strconv.Itoa(argIdx))
-		args = append(args, req.Reason)
-		argIdx++
+		gormTrade.Reason = req.Reason
 	}
-	if len(setClauses) == 0 {
-		return nil, nil // No fields to update
+
+	result = r.db.Save(&gormTrade)
+	if result.Error != nil {
+		log.Println("Failed to update trade:", result.Error)
+		return nil, result.Error
 	}
-	args = append(args, tradeID)
-	query := "UPDATE trades SET " + strings.Join(setClauses, ", ") + " WHERE id = $" + strconv.Itoa(argIdx)
-	_, err := r.db.Exec(query, args...)
-	if err != nil {
-		return nil, err
-	}
-	// Return updated trade
-	var t models.Trade
-	var reason sql.NullString
-	err = r.db.QueryRow(`SELECT t.id, t.type, t.asset_type, t.ticker, t.trade_date, t.quantity, t.price, t.currency, t.account_id, t.reason
-		FROM trades t JOIN accounts a ON t.account_id = a.id WHERE t.id = $1 AND a.user_id = $2`, tradeID, userID).Scan(
-		&t.ID, &t.Type, &t.AssetType, &t.Ticker, &t.TradeDate, &t.Quantity, &t.Price, &t.Currency, &t.AccountID, &reason,
-	)
-	if err != nil {
-		return nil, err
-	}
-	if reason.Valid {
-		t.Reason = &reason.String
-	}
-	return &t, nil
+
+	return &models.Trade{
+		ID:        gormTrade.ID,
+		Type:      gormTrade.Type,
+		AssetType: gormTrade.AssetType,
+		Ticker:    gormTrade.Ticker,
+		TradeDate: gormTrade.TradeDate,
+		Quantity:  gormTrade.Quantity,
+		Price:     gormTrade.Price,
+		Currency:  gormTrade.Currency,
+		AccountID: gormTrade.AccountID,
+		Reason:    gormTrade.Reason,
+	}, nil
 }
 
 func (r *TradeRepository) DeleteTrade(userID, tradeID string) (bool, error) {
-	res, err := r.db.Exec(`DELETE FROM trades WHERE id = $1 AND account_id IN (SELECT id FROM accounts WHERE user_id = $2)`, tradeID, userID)
-	if err != nil {
-		return false, err
+	result := r.db.Where("id = ? AND user_id = ?", tradeID, userID).Delete(&models.GormTrade{})
+	if result.Error != nil {
+		log.Println("Failed to delete trade:", result.Error)
+		return false, result.Error
 	}
-	n, _ := res.RowsAffected()
-	return n > 0, nil
+
+	return result.RowsAffected > 0, nil
 }

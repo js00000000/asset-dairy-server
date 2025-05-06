@@ -37,10 +37,16 @@ func main() {
 	if dbURL == "" {
 		log.Fatal("DATABASE_URL is not set")
 	}
-	driver, err := postgres.WithInstance(dbConn, &postgres.Config{})
+	sqlDB, err := dbConn.DB()
+	if err != nil {
+		log.Fatalf("Failed to get SQL database: %v", err)
+	}
+
+	driver, err := postgres.WithInstance(sqlDB, &postgres.Config{})
 	if err != nil {
 		log.Fatalf("Failed to create DB driver for migrations: %v", err)
 	}
+
 	m, err := migrate.NewWithDatabaseInstance(
 		"file://./migrations",
 		"postgres",
@@ -49,6 +55,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create migration instance: %v", err)
 	}
+
 	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
 		log.Fatalf("Migration failed: %v", err)
 	}

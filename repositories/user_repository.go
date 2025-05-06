@@ -2,10 +2,9 @@ package repositories
 
 import (
 	"asset-dairy/models"
-	"database/sql"
-	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 // UserRepositoryInterface 定義了使用者和個人檔案資料庫操作的介面
@@ -22,112 +21,123 @@ type UserRepositoryInterface interface {
 
 // UserRepository 實作了 UserRepositoryInterface
 type UserRepository struct {
-	DB *sql.DB
+	db *gorm.DB
 }
 
 // NewUserRepository 建立 UserRepository 實例
-func NewUserRepository(db *sql.DB) *UserRepository {
-	return &UserRepository{DB: db}
+func NewUserRepository(db *gorm.DB) *UserRepository {
+	return &UserRepository{db: db}
 }
 
 // CreateUser 建立新使用者
 func (r *UserRepository) CreateUser(req *models.SignUpRequest, hashedPassword string) (string, error) {
-	id := uuid.New().String()
-	err := r.DB.QueryRow(
-		`INSERT INTO users (id, email, name, username, password_hash, created_at) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-		id, req.Email, req.Name, req.Username, hashedPassword, time.Now(),
-	).Scan(&id)
-	return id, err
+	gormUser := &models.GormUser{
+		ID:            uuid.New().String(),
+		Email:         req.Email,
+		Name:          req.Name,
+		Username:      req.Username,
+		Password_Hash: hashedPassword,
+	}
+	result := r.db.Create(gormUser)
+	return gormUser.ID, result.Error
 }
 
 // FindByEmail 根據 Email 查詢使用者及密碼雜湊
 func (r *UserRepository) FindByEmail(email string) (*models.User, string, error) {
-	var user models.User
-	var passwordHash string
-	err := r.DB.QueryRow(`SELECT id, email, name, username, password_hash, created_at FROM users WHERE email = $1`, email).
-		Scan(&user.ID, &user.Email, &user.Name, &user.Username, &passwordHash, &user.CreatedAt)
-	if err != nil { // 包括 sql.ErrNoRows
-		return nil, "", err
+	var gormUser models.GormUser
+	result := r.db.Where(&models.GormUser{Email: email}).First(&gormUser)
+	if result.Error != nil {
+		return nil, "", result.Error
 	}
-	return &user, passwordHash, nil
+
+	user := &models.User{
+		ID:       gormUser.ID,
+		Email:    gormUser.Email,
+		Name:     gormUser.Name,
+		Username: gormUser.Username,
+		// CreatedAt removed due to model changes
+	}
+
+	return user, gormUser.Password_Hash, nil
 }
 
 // FindByID 根據 UserID 查詢使用者基本資料
 func (r *UserRepository) FindByID(userID string) (*models.User, error) {
-	var user models.User
-	err := r.DB.QueryRow("SELECT id, name, email, username FROM users WHERE id = $1", userID).
-		Scan(&user.ID, &user.Name, &user.Email, &user.Username)
-	if err != nil { // 包括 sql.ErrNoRows
-		return nil, err
+	var gormUser models.GormUser
+	result := r.db.Select("id", "name", "email", "username").Where("id = ?", userID).First(&gormUser)
+	if result.Error != nil {
+		return nil, result.Error
 	}
-	return &user, nil
+
+	return &models.User{
+		ID:       gormUser.ID,
+		Name:     gormUser.Name,
+		Email:    gormUser.Email,
+		Username: gormUser.Username,
+	}, nil
 }
 
 // GetPasswordHash 根據 UserID 取得密碼雜湊
 func (r *UserRepository) GetPasswordHash(userID string) (string, error) {
-	var passwordHash string
-	err := r.DB.QueryRow("SELECT password_hash FROM users WHERE id = $1", userID).Scan(&passwordHash)
-	return passwordHash, err // 包括 sql.ErrNoRows
+	var gormUser models.GormUser
+	result := r.db.Select("password").Where(&models.GormUser{ID: userID}).First(&gormUser)
+	return gormUser.Password_Hash, result.Error
 }
 
 // UpdatePasswordHash 更新使用者密碼雜湊
 func (r *UserRepository) UpdatePasswordHash(userID, hashedPassword string) error {
-	_, err := r.DB.Exec("UPDATE users SET password_hash = $1 WHERE id = $2", hashedPassword, userID)
-	return err
+	result := r.db.Model(&models.GormUser{}).Where(&models.GormUser{ID: userID}).Update("password", hashedPassword)
+	return result.Error
 }
 
 // UpdateUser 更新使用者姓名和用戶名
 func (r *UserRepository) UpdateUser(userID string, req *models.UserUpdateRequest) error {
-	_, err := r.DB.Exec(`UPDATE users SET name = $1, username = $2 WHERE id = $3`,
-		req.Name,
-		req.Username,
-		userID,
-	)
-	return err
+	result := r.db.Model(&models.GormUser{}).Where("id = ?", userID).Updates(map[string]interface{}{
+		"name":     req.Name,
+		"username": req.Username,
+	})
+	return result.Error
 }
 
 // FindInvestmentProfileByUserID 根據 UserID 查詢投資檔案
 func (r *UserRepository) FindInvestmentProfileByUserID(userID string) (*models.InvestmentProfile, error) {
-	var profile models.InvestmentProfile
-	err := r.DB.QueryRow("SELECT id, user_id, age, max_acceptable_short_term_loss_percentage, expected_annualized_rate_of_return, time_horizon, years_investing, monthly_cash_flow, default_currency FROM investment_profiles WHERE user_id = $1", userID).
-		Scan(&profile.Id, &profile.UserId, &profile.Age, &profile.MaxAcceptableShortTermLossPercentage, &profile.ExpectedAnnualizedRateOfReturn, &profile.TimeHorizon, &profile.YearsInvesting, &profile.MonthlyCashFlow, &profile.DefaultCurrency)
-	// 不需要特別處理 sql.ErrNoRows，讓呼叫者處理
-	return &profile, err
+	var gormProfile models.GormInvestmentProfile
+	result := r.db.Where(&models.GormInvestmentProfile{UserID: userID}).First(&gormProfile)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return &models.InvestmentProfile{
+		Id:                                   gormProfile.ID,
+		UserId:                               gormProfile.UserID,
+		Age:                                  gormProfile.Age,
+		MaxAcceptableShortTermLossPercentage: int(gormProfile.MaxAcceptableShortTermLossPercentage),
+		ExpectedAnnualizedRateOfReturn:       int(gormProfile.ExpectedAnnualizedRateOfReturn),
+		TimeHorizon:                          gormProfile.TimeHorizon,
+		YearsInvesting:                       gormProfile.YearsInvesting,
+		MonthlyCashFlow:                      gormProfile.MonthlyCashFlow,
+		DefaultCurrency:                      gormProfile.DefaultCurrency,
+	}, nil
 }
 
 // UpsertInvestmentProfile 新增或更新投資檔案
 func (r *UserRepository) UpsertInvestmentProfile(userID string, profile *models.InvestmentProfile) error {
-	// 檢查 profile 是否為 nil
 	if profile == nil {
-		// 可以選擇返回錯誤或執行刪除/清空操作，或忽略
-		// 這裡選擇忽略，如果需要清空，需要額外的邏輯
-		return nil // 或者返回一個錯誤 indicate nil profile
-	}
-	// 如果 profile.Id 是空字串或需要生成新的 UUID
-	profileID := profile.Id
-	if profileID == "" {
-		profileID = uuid.New().String()
+		return nil
 	}
 
-	_, err := r.DB.Exec(`INSERT INTO investment_profiles (id, user_id, age, max_acceptable_short_term_loss_percentage, expected_annualized_rate_of_return, time_horizon, years_investing, monthly_cash_flow, default_currency)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-		ON CONFLICT (user_id) DO UPDATE SET
-			age = EXCLUDED.age,
-			max_acceptable_short_term_loss_percentage = EXCLUDED.max_acceptable_short_term_loss_percentage,
-			expected_annualized_rate_of_return = EXCLUDED.expected_annualized_rate_of_return,
-			time_horizon = EXCLUDED.time_horizon,
-			years_investing = EXCLUDED.years_investing,
-			monthly_cash_flow = EXCLUDED.monthly_cash_flow,
-			default_currency = EXCLUDED.default_currency`,
-		profileID, // 使用生成的或提供的 ID
-		userID,
-		profile.Age,
-		profile.MaxAcceptableShortTermLossPercentage,
-		profile.ExpectedAnnualizedRateOfReturn,
-		profile.TimeHorizon,
-		profile.YearsInvesting,
-		profile.MonthlyCashFlow,
-		profile.DefaultCurrency,
-	)
-	return err
+	gormProfile := &models.GormInvestmentProfile{
+		UserID:                               userID,
+		Age:                                  profile.Age,
+		MaxAcceptableShortTermLossPercentage: float64(profile.MaxAcceptableShortTermLossPercentage),
+		ExpectedAnnualizedRateOfReturn:       float64(profile.ExpectedAnnualizedRateOfReturn),
+		TimeHorizon:                          profile.TimeHorizon,
+		YearsInvesting:                       profile.YearsInvesting,
+		MonthlyCashFlow:                      profile.MonthlyCashFlow,
+		DefaultCurrency:                      profile.DefaultCurrency,
+	}
+
+	// Use FirstOrCreate to either find an existing record or create a new one
+	result := r.db.Where(&models.GormInvestmentProfile{UserID: userID}).Assign(gormProfile).FirstOrCreate(gormProfile)
+	return result.Error
 }

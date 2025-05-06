@@ -1,14 +1,17 @@
 package db
 
 import (
-	"database/sql"
 	"log"
 	"os"
 
-	_ "github.com/lib/pq"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
-func InitDB() *sql.DB {
+var DB *gorm.DB
+
+func InitDB() *gorm.DB {
 	env := os.Getenv("ENV")
 	if env == "" {
 		env = "development"
@@ -20,12 +23,26 @@ func InitDB() *sql.DB {
 		dsn = "postgres://postgres:postgres@localhost:5432/asset_dairy?sslmode=disable"
 	}
 
-	db, err := sql.Open("postgres", dsn)
+	// Configure logger
+	dbLogger := logger.Default.LogMode(logger.Info)
+	if env == "production" {
+		dbLogger = logger.Default.LogMode(logger.Error)
+	}
+
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+		Logger: dbLogger,
+	})
 	if err != nil {
 		log.Fatalf("Failed to connect to DB: %v", err)
 	}
-	if err := db.Ping(); err != nil {
-		log.Fatalf("Failed to ping DB: %v", err)
-	}
+
+	// Set global DB instance
+	DB = db
+
 	return db
+}
+
+// GetDB returns the global DB instance
+func GetDB() *gorm.DB {
+	return DB
 }
