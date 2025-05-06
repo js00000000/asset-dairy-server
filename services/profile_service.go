@@ -6,9 +6,9 @@ import (
 )
 
 type ProfileServiceInterface interface {
-	GetProfile(userID string) (*models.ProfileResponse, error)
+	GetProfile(userID string) (*models.Profile, error)
 	ChangePassword(userID string, currentPassword, newPassword string) error
-	UpdateProfile(userID string, req *models.UserUpdateRequest) (*models.User, error)
+	UpdateProfile(userID string, req *models.UserUpdateRequest) (*models.Profile, error)
 }
 
 type ProfileService struct {
@@ -22,7 +22,7 @@ func NewProfileService(repo repositories.ProfileRepositoryInterface) *ProfileSer
 	}
 }
 
-func (s *ProfileService) GetProfile(userID string) (*models.ProfileResponse, error) {
+func (s *ProfileService) GetProfile(userID string) (*models.Profile, error) {
 	return s.repo.GetProfile(userID)
 }
 
@@ -30,8 +30,6 @@ func (s *ProfileService) ChangePassword(userID string, currentPassword, newPassw
 	return s.repo.ChangePassword(userID, currentPassword, newPassword)
 }
 
-func (s *ProfileService) UpdateProfile(userID string, req *models.UserUpdateRequest) (*models.User, error) {
+func (s *ProfileService) UpdateProfile(userID string, req *models.UserUpdateRequest) (*models.Profile, error) {
 	return s.repo.UpdateProfile(userID, req)
 }
-
-

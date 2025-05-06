@@ -7,15 +7,14 @@ import (
 
 	"gorm.io/gorm"
 
-	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
 // ProfileRepositoryInterface defines methods for profile-related database operations
 type ProfileRepositoryInterface interface {
-	GetProfile(userID string) (*models.ProfileResponse, error)
+	GetProfile(userID string) (*models.Profile, error)
 	ChangePassword(userID string, currentPassword, newPassword string) error
-	UpdateProfile(userID string, req *models.UserUpdateRequest) (*models.User, error)
+	UpdateProfile(userID string, req *models.UserUpdateRequest) (*models.Profile, error)
 }
 
 // ProfileRepository implements ProfileRepositoryInterface
@@ -29,59 +28,55 @@ func NewProfileRepository(db *gorm.DB) *ProfileRepository {
 }
 
 // GetProfile retrieves user profile and investment profile from the database
-func (r *ProfileRepository) GetProfile(userID string) (*models.ProfileResponse, error) {
-	var gormUser models.User
-	result := r.db.Where(&models.User{ID: userID}).First(&gormUser)
+func (r *ProfileRepository) GetProfile(userID string) (*models.Profile, error) {
+	var user models.User
+	result := r.db.Where(&models.User{ID: userID}).First(&user)
 	if result.Error != nil {
 		log.Println("Failed to fetch user:", result.Error)
 		return nil, result.Error
 	}
 
 	// Fetch investment profile
-	var gormInvestmentProfile models.InvestmentProfile
-	result = r.db.Where(&models.InvestmentProfile{UserID: userID}).First(&gormInvestmentProfile)
+	var investmentProfile models.InvestmentProfile
+	result = r.db.Where(&models.InvestmentProfile{UserID: userID}).First(&investmentProfile)
 	if result.Error == gorm.ErrRecordNotFound {
-		return &models.ProfileResponse{
-			ID:       gormUser.ID,
-			Email:    gormUser.Email,
-			Name:     gormUser.Name,
-			Username: gormUser.Username,
+		return &models.Profile{
+			Email:    user.Email,
+			Name:     user.Name,
+			Username: user.Username,
 		}, nil
 	} else if result.Error != nil {
 		log.Println("Failed to fetch investment profile:", result.Error)
 		return nil, result.Error
 	}
 
-	return &models.ProfileResponse{
-		ID:       gormUser.ID,
-		Email:    gormUser.Email,
-		Name:     gormUser.Name,
-		Username: gormUser.Username,
+	return &models.Profile{
+		Email:    user.Email,
+		Name:     user.Name,
+		Username: user.Username,
 		InvestmentProfile: &models.InvestmentProfile{
-			ID:                                   gormInvestmentProfile.ID,
-			UserID:                               gormInvestmentProfile.UserID,
-			Age:                                  int(gormInvestmentProfile.Age),
-			MaxAcceptableShortTermLossPercentage: int(gormInvestmentProfile.MaxAcceptableShortTermLossPercentage),
-			ExpectedAnnualizedRateOfReturn:       int(gormInvestmentProfile.ExpectedAnnualizedRateOfReturn),
-			TimeHorizon:                          gormInvestmentProfile.TimeHorizon,
-			YearsInvesting:                       int(gormInvestmentProfile.YearsInvesting),
-			MonthlyCashFlow:                      gormInvestmentProfile.MonthlyCashFlow,
-			DefaultCurrency:                      gormInvestmentProfile.DefaultCurrency,
+			Age:                                  int(investmentProfile.Age),
+			MaxAcceptableShortTermLossPercentage: int(investmentProfile.MaxAcceptableShortTermLossPercentage),
+			ExpectedAnnualizedRateOfReturn:       int(investmentProfile.ExpectedAnnualizedRateOfReturn),
+			TimeHorizon:                          investmentProfile.TimeHorizon,
+			YearsInvesting:                       int(investmentProfile.YearsInvesting),
+			MonthlyCashFlow:                      investmentProfile.MonthlyCashFlow,
+			DefaultCurrency:                      investmentProfile.DefaultCurrency,
 		},
 	}, nil
 }
 
 // ChangePassword updates the user's password after verifying the current password
 func (r *ProfileRepository) ChangePassword(userID string, currentPassword, newPassword string) error {
-	var gormUser models.User
-	result := r.db.Where(&models.User{ID: userID}).First(&gormUser)
+	var user models.User
+	result := r.db.Where(&models.User{ID: userID}).First(&user)
 	if result.Error != nil {
 		log.Println("Failed to find user:", result.Error)
 		return result.Error
 	}
 
 	// Check current password
-	err := bcrypt.CompareHashAndPassword([]byte(gormUser.Password_Hash), []byte(currentPassword))
+	err := bcrypt.CompareHashAndPassword([]byte(user.Password_Hash), []byte(currentPassword))
 	if err != nil {
 		return err
 	}
@@ -93,8 +88,8 @@ func (r *ProfileRepository) ChangePassword(userID string, currentPassword, newPa
 	}
 
 	// Update password
-	gormUser.Password_Hash = string(hashedPassword)
-	result = r.db.Save(&gormUser)
+	user.Password_Hash = string(hashedPassword)
+	result = r.db.Save(&user)
 	if result.Error != nil {
 		log.Println("Failed to update password:", result.Error)
 		return result.Error
@@ -103,20 +98,20 @@ func (r *ProfileRepository) ChangePassword(userID string, currentPassword, newPa
 	return nil
 }
 
-func (r *ProfileRepository) UpdateProfile(userID string, req *models.UserUpdateRequest) (*models.User, error) {
+func (r *ProfileRepository) UpdateProfile(userID string, req *models.UserUpdateRequest) (*models.Profile, error) {
 	// Find and update user
-	var gormUser models.User
-	result := r.db.Where(&models.User{ID: userID}).First(&gormUser)
+	var user models.User
+	result := r.db.Where(&models.User{ID: userID}).First(&user)
 	if result.Error != nil {
 		log.Println("Failed to find user:", result.Error)
 		return nil, result.Error
 	}
 
 	// Update fields
-	gormUser.Name = req.Name
-	gormUser.Username = req.Username
+	user.Name = req.Name
+	user.Username = req.Username
 
-	result = r.db.Save(&gormUser)
+	result = r.db.Save(&user)
 	if result.Error != nil {
 		log.Println("Failed to update user:", result.Error)
 		return nil, result.Error
@@ -131,7 +126,6 @@ func (r *ProfileRepository) UpdateProfile(userID string, req *models.UserUpdateR
 		if result.Error == gorm.ErrRecordNotFound {
 			// Create new investment profile
 			newProfile := models.InvestmentProfile{
-				ID:                                   uuid.New().String(),
 				UserID:                               userID,
 				Age:                                  int(req.InvestmentProfile.Age),
 				MaxAcceptableShortTermLossPercentage: int(req.InvestmentProfile.MaxAcceptableShortTermLossPercentage),
@@ -141,6 +135,7 @@ func (r *ProfileRepository) UpdateProfile(userID string, req *models.UserUpdateR
 				MonthlyCashFlow:                      req.InvestmentProfile.MonthlyCashFlow,
 				DefaultCurrency:                      req.InvestmentProfile.DefaultCurrency,
 			}
+			existingProfile = newProfile
 			result = r.db.Create(&newProfile)
 		} else if result.Error == nil {
 			// Update existing investment profile
@@ -161,12 +156,26 @@ func (r *ProfileRepository) UpdateProfile(userID string, req *models.UserUpdateR
 			log.Println("Failed to save investment profile:", result.Error)
 			return nil, result.Error
 		}
+
+		return &models.Profile{
+			Email:    user.Email,
+			Name:     user.Name,
+			Username: user.Username,
+			InvestmentProfile: &models.InvestmentProfile{
+				Age:                                  int(existingProfile.Age),
+				MaxAcceptableShortTermLossPercentage: int(existingProfile.MaxAcceptableShortTermLossPercentage),
+				ExpectedAnnualizedRateOfReturn:       int(existingProfile.ExpectedAnnualizedRateOfReturn),
+				TimeHorizon:                          existingProfile.TimeHorizon,
+				YearsInvesting:                       int(existingProfile.YearsInvesting),
+				MonthlyCashFlow:                      existingProfile.MonthlyCashFlow,
+				DefaultCurrency:                      existingProfile.DefaultCurrency,
+			},
+		}, nil
 	}
 
-	return &models.User{
-		ID:       gormUser.ID,
-		Name:     gormUser.Name,
-		Email:    gormUser.Email,
-		Username: gormUser.Username,
+	return &models.Profile{
+		Email:    user.Email,
+		Name:     user.Name,
+		Username: user.Username,
 	}, nil
 }

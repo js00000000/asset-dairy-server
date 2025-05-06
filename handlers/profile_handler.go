@@ -11,14 +11,14 @@ import (
 // ProfileHandler handles profile-related HTTP requests
 type ProfileHandler struct {
 	profileService services.ProfileServiceInterface
-	userService services.UserServiceInterface
+	userService    services.UserServiceInterface
 }
 
 // NewProfileHandler creates a new ProfileHandler instance
 func NewProfileHandler(profileService services.ProfileServiceInterface, userService services.UserServiceInterface) *ProfileHandler {
 	return &ProfileHandler{
 		profileService: profileService,
-		userService: userService,
+		userService:    userService,
 	}
 }
 
@@ -36,7 +36,20 @@ func (h *ProfileHandler) GetProfile(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, profile)
+	c.JSON(http.StatusOK, models.ProfileResponse{
+		Email:    profile.Email,
+		Name:     profile.Name,
+		Username: profile.Username,
+		InvestmentProfile: &models.InvestmentProfileResponse{
+			Age:                                  profile.InvestmentProfile.Age,
+			MaxAcceptableShortTermLossPercentage: profile.InvestmentProfile.MaxAcceptableShortTermLossPercentage,
+			ExpectedAnnualizedRateOfReturn:       profile.InvestmentProfile.ExpectedAnnualizedRateOfReturn,
+			TimeHorizon:                          profile.InvestmentProfile.TimeHorizon,
+			YearsInvesting:                       profile.InvestmentProfile.YearsInvesting,
+			MonthlyCashFlow:                      profile.InvestmentProfile.MonthlyCashFlow,
+			DefaultCurrency:                      profile.InvestmentProfile.DefaultCurrency,
+		},
+	})
 }
 
 // ChangePassword changes the current user's password
@@ -76,13 +89,26 @@ func (h *ProfileHandler) UpdateProfile(c *gin.Context) {
 		return
 	}
 
-	user, err := h.profileService.UpdateProfile(userID.(string), &req)
+	profile, err := h.profileService.UpdateProfile(userID.(string), &req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, user)
+	c.JSON(http.StatusOK, models.ProfileResponse{
+		Name:     profile.Name,
+		Email:    profile.Email,
+		Username: profile.Username,
+		InvestmentProfile: &models.InvestmentProfileResponse{
+			Age:                                  profile.InvestmentProfile.Age,
+			MaxAcceptableShortTermLossPercentage: profile.InvestmentProfile.MaxAcceptableShortTermLossPercentage,
+			ExpectedAnnualizedRateOfReturn:       profile.InvestmentProfile.ExpectedAnnualizedRateOfReturn,
+			TimeHorizon:                          profile.InvestmentProfile.TimeHorizon,
+			YearsInvesting:                       profile.InvestmentProfile.YearsInvesting,
+			MonthlyCashFlow:                      profile.InvestmentProfile.MonthlyCashFlow,
+			DefaultCurrency:                      profile.InvestmentProfile.DefaultCurrency,
+		},
+	})
 }
 
 // DeleteProfile deletes the current user's profile and all associated data

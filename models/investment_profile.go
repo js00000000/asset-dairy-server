@@ -1,8 +1,7 @@
 package models
 
 type InvestmentProfile struct {
-	ID                                   string  `gorm:"primaryKey;type:uuid" json:"id" db:"id"`
-	UserID                               string  `gorm:"type:uuid;not null;unique;index" json:"user_id" db:"user_id"`
+	UserID                               string  `gorm:"primaryKey;type:uuid;not null;unique;index" json:"user_id" db:"user_id"`
 	User                                 User    `gorm:"foreignKey:UserID;references:ID;onUpdate:CASCADE;onDelete:CASCADE" json:"user"`
 	Age                                  int     `gorm:"nullable" json:"age" db:"age"`
 	MaxAcceptableShortTermLossPercentage int     `gorm:"nullable" json:"maxAcceptableShortTermLossPercentage" db:"max_acceptable_short_term_loss_percentage"`
