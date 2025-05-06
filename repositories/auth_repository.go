@@ -62,13 +62,26 @@ func (r *AuthRepository) UpdateUserPassword(email, hashedPassword string) error 
 }
 
 func (r *AuthRepository) StoreVerificationCode(email, code string, expiry time.Duration) error {
-	verificationCode := &models.VerificationCode{
-		Email:      email,
-		Code:       code,
-		ExpiresAt:  time.Now().Add(expiry),
+	verificationCode := models.VerificationCode{
+		Email: email,
 	}
 
-	result := r.DB.Create(verificationCode)
+	// First, try to find an existing verification code for this email
+	result := r.DB.Where(&verificationCode).First(&verificationCode)
+
+	// Update or create the verification code
+	if result.Error == gorm.ErrRecordNotFound {
+		// If not found, create a new record
+		verificationCode.Code = code
+		verificationCode.ExpiresAt = time.Now().Add(expiry)
+		result = r.DB.Create(&verificationCode)
+	} else {
+		// If found, update the existing record
+		verificationCode.Code = code
+		verificationCode.ExpiresAt = time.Now().Add(expiry)
+		result = r.DB.Save(&verificationCode)
+	}
+
 	if result.Error != nil {
 		log.Println("Failed to store verification code:", result.Error)
 		return result.Error
