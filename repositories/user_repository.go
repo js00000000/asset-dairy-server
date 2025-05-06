@@ -129,8 +129,8 @@ func (r *UserRepository) UpsertInvestmentProfile(userID string, profile *models.
 	gormProfile := &models.GormInvestmentProfile{
 		UserID:                               userID,
 		Age:                                  profile.Age,
-		MaxAcceptableShortTermLossPercentage: float64(profile.MaxAcceptableShortTermLossPercentage),
-		ExpectedAnnualizedRateOfReturn:       float64(profile.ExpectedAnnualizedRateOfReturn),
+		MaxAcceptableShortTermLossPercentage: int(profile.MaxAcceptableShortTermLossPercentage),
+		ExpectedAnnualizedRateOfReturn:       int(profile.ExpectedAnnualizedRateOfReturn),
 		TimeHorizon:                          profile.TimeHorizon,
 		YearsInvesting:                       profile.YearsInvesting,
 		MonthlyCashFlow:                      profile.MonthlyCashFlow,

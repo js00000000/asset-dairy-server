@@ -3,11 +3,12 @@ package models
 import "time"
 
 type GormAccount struct {
-	ID       string  `gorm:"primaryKey;type:uuid"`
-	UserID   string  `gorm:"type:uuid;not null;index"`
-	Name     string  `gorm:"not null"`
-	Currency string  `gorm:"not null"`
-	Balance  float64 `gorm:"not null"`
+	ID       string   `gorm:"primaryKey;type:uuid"`
+	UserID   string   `gorm:"type:uuid;not null;index"`
+	User     GormUser `gorm:"foreignKey:UserID;references:ID;onUpdate:CASCADE;onDelete:CASCADE"`
+	Name     string   `gorm:"not null"`
+	Currency string   `gorm:"not null"`
+	Balance  float64  `gorm:"not null"`
 }
 
 func (GormAccount) TableName() string {
@@ -27,15 +28,16 @@ func (GormUser) TableName() string {
 }
 
 type GormInvestmentProfile struct {
-	ID                                   string  `gorm:"primaryKey;type:uuid"`
-	UserID                               string  `gorm:"type:uuid;not null;index"`
-	Age                                  int     `gorm:"not null"`
-	MaxAcceptableShortTermLossPercentage float64 `gorm:"not null"`
-	ExpectedAnnualizedRateOfReturn       float64 `gorm:"not null"`
-	TimeHorizon                          string  `gorm:"not null"`
-	YearsInvesting                       int     `gorm:"not null"`
-	MonthlyCashFlow                      float64 `gorm:"not null"`
-	DefaultCurrency                      string  `gorm:"not null"`
+	ID                                   string   `gorm:"primaryKey;type:uuid"`
+	UserID                               string   `gorm:"type:uuid;not null;unique;index"`
+	User                                 GormUser `gorm:"foreignKey:UserID;references:ID;onUpdate:CASCADE;onDelete:CASCADE"`
+	Age                                  int      `gorm:"nullable"`
+	MaxAcceptableShortTermLossPercentage int      `gorm:"nullable"`
+	ExpectedAnnualizedRateOfReturn       int      `gorm:"nullable"`
+	TimeHorizon                          string   `gorm:"nullable"`
+	YearsInvesting                       int      `gorm:"nullable"`
+	MonthlyCashFlow                      float64  `gorm:"nullable"`
+	DefaultCurrency                      string   `gorm:"nullable"`
 }
 
 func (GormInvestmentProfile) TableName() string {
@@ -43,17 +45,19 @@ func (GormInvestmentProfile) TableName() string {
 }
 
 type GormTrade struct {
-	ID        string    `gorm:"primaryKey;type:uuid"`
-	UserID    string    `gorm:"type:uuid;not null;index"`
-	Type      string    `gorm:"not null"`
-	AssetType string    `gorm:"not null"`
-	Ticker    string    `gorm:"not null"`
-	TradeDate time.Time `gorm:"not null"`
-	Quantity  float64   `gorm:"not null"`
-	Price     float64   `gorm:"not null"`
-	Currency  string    `gorm:"not null"`
-	AccountID string    `gorm:"type:uuid;not null;index"`
-	Reason    *string   `gorm:"nullable"`
+	ID        string      `gorm:"primaryKey;type:uuid"`
+	UserID    string      `gorm:"type:uuid;not null;index"`
+	User      GormUser    `gorm:"foreignKey:UserID;references:ID;onUpdate:CASCADE;onDelete:CASCADE"`
+	Type      string      `gorm:"not null"`
+	AssetType string      `gorm:"not null"`
+	Ticker    string      `gorm:"not null"`
+	TradeDate time.Time   `gorm:"not null"`
+	Quantity  float64     `gorm:"not null"`
+	Price     float64     `gorm:"not null"`
+	Currency  string      `gorm:"not null"`
+	AccountID string      `gorm:"type:uuid;not null;index"`
+	Account   GormAccount `gorm:"foreignKey:AccountID;references:ID;onUpdate:CASCADE"`
+	Reason    *string     `gorm:"nullable"`
 }
 
 func (GormTrade) TableName() string {

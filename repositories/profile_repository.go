@@ -134,8 +134,8 @@ func (r *ProfileRepository) UpdateProfile(userID string, req *models.UserUpdateR
 				ID:                                   uuid.New().String(),
 				UserID:                               userID,
 				Age:                                  int(req.InvestmentProfile.Age),
-				MaxAcceptableShortTermLossPercentage: float64(req.InvestmentProfile.MaxAcceptableShortTermLossPercentage),
-				ExpectedAnnualizedRateOfReturn:       float64(req.InvestmentProfile.ExpectedAnnualizedRateOfReturn),
+				MaxAcceptableShortTermLossPercentage: int(req.InvestmentProfile.MaxAcceptableShortTermLossPercentage),
+				ExpectedAnnualizedRateOfReturn:       int(req.InvestmentProfile.ExpectedAnnualizedRateOfReturn),
 				TimeHorizon:                          req.InvestmentProfile.TimeHorizon,
 				YearsInvesting:                       int(req.InvestmentProfile.YearsInvesting),
 				MonthlyCashFlow:                      req.InvestmentProfile.MonthlyCashFlow,
@@ -145,8 +145,8 @@ func (r *ProfileRepository) UpdateProfile(userID string, req *models.UserUpdateR
 		} else if result.Error == nil {
 			// Update existing investment profile
 			existingProfile.Age = int(req.InvestmentProfile.Age)
-			existingProfile.MaxAcceptableShortTermLossPercentage = float64(req.InvestmentProfile.MaxAcceptableShortTermLossPercentage)
-			existingProfile.ExpectedAnnualizedRateOfReturn = float64(req.InvestmentProfile.ExpectedAnnualizedRateOfReturn)
+			existingProfile.MaxAcceptableShortTermLossPercentage = int(req.InvestmentProfile.MaxAcceptableShortTermLossPercentage)
+			existingProfile.ExpectedAnnualizedRateOfReturn = int(req.InvestmentProfile.ExpectedAnnualizedRateOfReturn)
 			existingProfile.TimeHorizon = req.InvestmentProfile.TimeHorizon
 			existingProfile.YearsInvesting = int(req.InvestmentProfile.YearsInvesting)
 			existingProfile.MonthlyCashFlow = req.InvestmentProfile.MonthlyCashFlow
