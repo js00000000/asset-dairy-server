@@ -45,7 +45,9 @@ func (r *ProfileRepository) GetProfile(userID string) (*models.Profile, error) {
 			Name:     user.Name,
 			Username: user.Username,
 		}, nil
-	} else if result.Error != nil {
+	}
+
+	if result.Error != nil {
 		log.Println("Failed to fetch investment profile:", result.Error)
 		return nil, result.Error
 	}

@@ -36,20 +36,28 @@ func (h *ProfileHandler) GetProfile(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, models.ProfileResponse{
-		Email:    profile.Email,
-		Name:     profile.Name,
-		Username: profile.Username,
-		InvestmentProfile: &models.InvestmentProfileResponse{
-			Age:                                  profile.InvestmentProfile.Age,
-			MaxAcceptableShortTermLossPercentage: profile.InvestmentProfile.MaxAcceptableShortTermLossPercentage,
-			ExpectedAnnualizedRateOfReturn:       profile.InvestmentProfile.ExpectedAnnualizedRateOfReturn,
-			TimeHorizon:                          profile.InvestmentProfile.TimeHorizon,
-			YearsInvesting:                       profile.InvestmentProfile.YearsInvesting,
-			MonthlyCashFlow:                      profile.InvestmentProfile.MonthlyCashFlow,
-			DefaultCurrency:                      profile.InvestmentProfile.DefaultCurrency,
-		},
-	})
+	if profile.InvestmentProfile != nil {
+		c.JSON(http.StatusOK, models.ProfileResponse{
+			Email:    profile.Email,
+			Name:     profile.Name,
+			Username: profile.Username,
+			InvestmentProfile: &models.InvestmentProfileResponse{
+				Age:                                  profile.InvestmentProfile.Age,
+				MaxAcceptableShortTermLossPercentage: profile.InvestmentProfile.MaxAcceptableShortTermLossPercentage,
+				ExpectedAnnualizedRateOfReturn:       profile.InvestmentProfile.ExpectedAnnualizedRateOfReturn,
+				TimeHorizon:                          profile.InvestmentProfile.TimeHorizon,
+				YearsInvesting:                       profile.InvestmentProfile.YearsInvesting,
+				MonthlyCashFlow:                      profile.InvestmentProfile.MonthlyCashFlow,
+				DefaultCurrency:                      profile.InvestmentProfile.DefaultCurrency,
+			},
+		})
+	} else {
+		c.JSON(http.StatusOK, models.ProfileResponse{
+			Email:    profile.Email,
+			Name:     profile.Name,
+			Username: profile.Username,
+		})
+	}
 }
 
 // ChangePassword changes the current user's password
