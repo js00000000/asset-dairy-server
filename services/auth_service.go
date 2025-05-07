@@ -4,17 +4,20 @@ import (
 	"asset-dairy/models"
 	"asset-dairy/repositories"
 	"bytes"
+	"crypto/tls"
 	"errors"
 	"fmt"
+	"log"
 	"math/rand"
-	"net/smtp"
 	"os"
+	"strconv"
 	"text/template"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
+	"gopkg.in/gomail.v2"
 )
 
 var (
@@ -231,23 +234,22 @@ func (s *AuthService) VerifyResetCode(email, code string) error {
 func sendPasswordResetEmail(email, newPassword string) error {
 	// Email configuration
 	from := os.Getenv("EMAIL_FROM")
-	password := os.Getenv("EMAIL_PASSWORD")
-	host := os.Getenv("EMAIL_HOST")
-	port := os.Getenv("EMAIL_PORT")
+	smtpUser := os.Getenv("SMTP_USER")
+	smtpPass := os.Getenv("SMTP_PASS")
+	smtpHost := os.Getenv("SMTP_HOST")
+	portStr := os.Getenv("SMTP_PORT")
 
-	// Validate email configuration
-	if from == "" || password == "" || host == "" || port == "" {
+	if from == "" || smtpUser == "" || smtpPass == "" || smtpHost == "" || portStr == "" {
 		return errors.New("incomplete email configuration")
 	}
 
-	// Prepare email body
-	var body bytes.Buffer
-	templ := template.Must(template.New("passwordReset").Parse(`From: {{.From}}
-To: {{.To}}
-Subject: Asset Dairy Password Reset
-Content-Type: text/plain; charset=UTF-8
+	port, err := strconv.Atoi(portStr)
+	if err != nil || port <= 0 {
+		return fmt.Errorf("invalid SMTP port: %s", portStr)
+	}
 
-Your password has been reset. Please log in with the following temporary password:
+	var body bytes.Buffer
+	templ := template.Must(template.New("passwordReset").Parse(`Your password has been reset. Please log in with the following temporary password:
 
 {{.Password}}
 
@@ -256,28 +258,30 @@ Please change this password immediately after logging in.
 Best regards,
 Asset Dairy Team`))
 
-	err := templ.Execute(&body, struct {
-		From     string
-		To       string
+	err = templ.Execute(&body, struct {
 		Password string
 	}{
-		From:     from,
-		To:       email,
 		Password: newPassword,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create email template: %v", err)
 	}
 
-	// Authentication
-	auth := smtp.PlainAuth("", from, password, host)
+	msg := gomail.NewMessage()
+	msg.SetHeader("From", from)
+	msg.SetHeader("To", email)
+	msg.SetHeader("Subject", "Asset Dairy Password Reset")
+	msg.SetBody("text/plain", body.String())
 
-	// Send email
-	err = smtp.SendMail(host+":"+port, auth, from, []string{email}, body.Bytes())
-	if err != nil {
+	dialer := gomail.NewDialer(smtpHost, port, smtpUser, smtpPass)
+	dialer.TLSConfig = &tls.Config{ServerName: smtpHost, InsecureSkipVerify: false}
+
+	if err := dialer.DialAndSend(msg); err != nil {
+		log.Printf("Failed to send password reset email to %s: %v (SMTP User: %s, Host: %s:%d)", email, err, smtpUser, smtpHost, port)
 		return fmt.Errorf("failed to send email: %v", err)
 	}
 
+	log.Printf("Password reset email sent to %s", email)
 	return nil
 }
 
@@ -296,25 +300,23 @@ func generateRandomPassword() string {
 }
 
 func sendVerificationEmail(email, code string) error {
-	// Email configuration
 	from := os.Getenv("EMAIL_FROM")
-	password := os.Getenv("EMAIL_PASSWORD")
-	host := os.Getenv("EMAIL_HOST")
-	port := os.Getenv("EMAIL_PORT")
+	smtpUser := os.Getenv("SMTP_USER")
+	smtpPass := os.Getenv("SMTP_PASS")
+	smtpHost := os.Getenv("SMTP_HOST")
+	portStr := os.Getenv("SMTP_PORT")
 
-	// Validate email configuration
-	if from == "" || password == "" || host == "" || port == "" {
+	if from == "" || smtpUser == "" || smtpPass == "" || smtpHost == "" || portStr == "" {
 		return errors.New("incomplete email configuration")
 	}
 
-	// Prepare email body
-	var body bytes.Buffer
-	templ := template.Must(template.New("verificationCode").Parse(`From: {{.From}}
-To: {{.To}}
-Subject: Asset Dairy Verification Code
-Content-Type: text/plain; charset=UTF-8
+	port, err := strconv.Atoi(portStr)
+	if err != nil || port <= 0 {
+		return fmt.Errorf("invalid SMTP port: %s", portStr)
+	}
 
-Your verification code is:
+	var body bytes.Buffer
+	templ := template.Must(template.New("verificationCode").Parse(`Your verification code is:
 
 {{.Code}}
 
@@ -323,7 +325,7 @@ This code will expire in 3 minutes.
 Best regards,
 Asset Dairy Team`))
 
-	err := templ.Execute(&body, struct {
+	err = templ.Execute(&body, struct {
 		From string
 		To   string
 		Code string
@@ -336,14 +338,20 @@ Asset Dairy Team`))
 		return fmt.Errorf("failed to create email template: %v", err)
 	}
 
-	// Authentication
-	auth := smtp.PlainAuth("", from, password, host)
+	msg := gomail.NewMessage()
+	msg.SetHeader("From", from)
+	msg.SetHeader("To", email)
+	msg.SetHeader("Subject", "Asset Dairy Verification Code")
+	msg.SetBody("text/plain", body.String())
 
-	// Send email
-	err = smtp.SendMail(host+":"+port, auth, from, []string{email}, body.Bytes())
-	if err != nil {
+	dialer := gomail.NewDialer(smtpHost, port, smtpUser, smtpPass)
+	dialer.TLSConfig = &tls.Config{ServerName: smtpHost, InsecureSkipVerify: false}
+
+	if err := dialer.DialAndSend(msg); err != nil {
+		log.Printf("Failed to send email to %s: %v (SMTP User: %s, Host: %s:%d)", email, err, smtpUser, smtpHost, port)
 		return fmt.Errorf("failed to send email: %v", err)
 	}
 
+	log.Printf("Verification email sent to %s", email)
 	return nil
 }
